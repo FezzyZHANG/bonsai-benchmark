@@ -161,7 +161,8 @@ static int eval_ids(llama_context * ctx, const int32_t * ids, int32_t n, int32_t
     int32_t off = 0;
     while (off < n) {
         const int32_t take = std::min(n - off, n_batch);
-        std::vector<llama_token> chunk(size_t(take));
+        std::vector<llama_token> chunk;
+        chunk.resize(size_t(take));
         for (int32_t i = 0; i < take; ++i) chunk[size_t(i)] = llama_token(ids[off + i]);
         llama_batch b = llama_batch_get_one(chunk.data(), take);
         if (llama_decode(ctx, b) != 0) return -1;

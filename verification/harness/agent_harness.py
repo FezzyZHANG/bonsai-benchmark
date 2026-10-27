@@ -14,6 +14,7 @@ import numpy as np
 
 OK = 0
 IGNORE_EOS = 1
+BOS = 248044
 
 
 # ---------------------------------------------------------------------------
@@ -242,6 +243,10 @@ def suite_dequant(eng, golden, golden_dir):
     details = []
     for c in cases:
         ref = np.load(os.path.join(golden_dir, c["file"]))
+        # Golden stores the dequantized f16 values; the ABI returns f32. The
+        # widening is exact (ternary weights, fp16 scale), so compare f32 bits.
+        if ref.dtype == np.float16:
+            ref = ref.astype(np.float32)
         got = eng.tensor_dequant(c["name"], ref.shape)
         ok = got.shape == ref.shape and np.array_equal(got.view(np.uint32), ref.view(np.uint32))
         exact += int(ok)
@@ -341,12 +346,11 @@ def run_perf(eng, corpus_tokens, reps=3):
         pp[n] = n / med
     tg = {}
     for depth in [0, 512, 2048, 4096, 8192]:
-        toks = prompt_of(depth)
+        toks = prompt_of(depth) if depth > 0 else [BOS]
         times = []
         for _ in range(reps):
-            ctx = eng.ctx(depth + 256)
-            if toks:
-                eng.eval(ctx, toks, want_logits=False)
+            ctx = eng.ctx(max(depth, 1) + 256)
+            eng.eval(ctx, toks, want_logits=False)
             t0 = time.perf_counter()
             eng.generate(ctx, [], 128, True)
             times.append(time.perf_counter() - t0)

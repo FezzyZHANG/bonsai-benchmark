@@ -16,6 +16,9 @@ PY = os.path.join(BENCH, "deps/python/bin/python")
 MODEL = os.path.join(BENCH, "deps/data/Ternary-Bonsai-2-4B-PTQ1_0.gguf")
 ST = os.path.join(BENCH, "deps/data/Ternary-Bonsai-2-4B-PTQ1_0-f16.safetensors")
 ORACLE = os.path.join(BENCH, "deps/ref/bin/bonsai-ref")
+ORACLE_CPU = os.path.join(HERE, "bin/bonsai-ref-cpu")
+if not os.path.exists(ORACLE_CPU):
+    ORACLE_CPU = os.path.join(BENCH, "deps/ref/bin/bonsai-ref-cpu")
 GOLDEN = os.path.join(HERE, "tests/golden/manifest.json")
 AGENT_IMAGE = os.environ.get("AGENT_IMAGE", "bonsai-agent:1.0")
 
@@ -56,7 +59,7 @@ def ensure_golden():
     log("golden data missing; generating with CPU oracle (this takes a few minutes)")
     os.makedirs(os.path.dirname(GOLDEN), exist_ok=True)
     r = run([PY, os.path.join(HERE, "tools/generate_golden.py"),
-             "--model", MODEL, "--oracle", ORACLE, "--safetensors", ST,
+             "--model", MODEL, "--oracle", ORACLE_CPU, "--safetensors", ST,
              "--tests", os.path.join(HERE, "tests"), "--out", os.path.dirname(GOLDEN)],
             timeout=3600)
     if r.returncode != 0:
@@ -89,51 +92,73 @@ def run_harness(lib, out_json, no_container, skip_perf):
         raise SystemExit(f"harness failed (exit {r.returncode})")
 
 
+def _proc_vram(pid):
+    """Sum amdgpu VRAM across this process's DRM clients (deduped)."""
+    import re
+    clients = {}
+    try:
+        names = os.listdir(f"/proc/{pid}/fdinfo")
+    except OSError:
+        return 0
+    for name in names:
+        try:
+            txt = open(f"/proc/{pid}/fdinfo/{name}").read()
+        except OSError:
+            continue
+        if "drm-driver:" not in txt:
+            continue
+        cid = re.search(r"drm-client-id:\s+(\d+)", txt)
+        cid = cid.group(1) if cid else name
+        m = re.search(r"drm-memory-vram:\s+(\d+)\s+KiB", txt)
+        if m:
+            clients[cid] = max(clients.get(cid, 0), int(m.group(1)) * 1024)
+    return sum(clients.values())
+
+
+def _proc_rss_hwm(pid):
+    try:
+        for line in open(f"/proc/{pid}/status"):
+            if line.startswith("VmHWM:"):
+                return int(line.split()[1]) * 1024
+    except OSError:
+        pass
+    return 0
+
+
 def measure_reference(no_container):
     """Measure reference Vulkan pp/tg and peak VRAM/RSS on this machine."""
+    import threading
     sys.path.insert(0, os.path.join(HERE, "tools"))
     from ref_client import RefClient
     tok = RefClient(ORACLE, stderr_path=None)
     tok.load(MODEL)
     corpus = json.load(open(GOLDEN))["corpus_tokens"]
-    prompts = {}
+
     def toks(n):
         if n == 0:
             return []
         r = (n + len(corpus) - 1) // len(corpus)
         return (corpus * r)[:n]
 
-    # Reference VRAM at the largest context (cap is applied against this).
-    tok.ctx(900, 8192, "vulkan")
-    tok.eval(900, toks(512)[:0])  # ensure context exists
-    time.sleep(0.2)
-    ref_peak = 0
-    ref_rss = 0
-    try:
-        import re
-        for _ in range(30):
-            clients = {}
-            try:
-                names = os.listdir(f"/proc/{tok.p.pid}/fdinfo")
-            except OSError:
-                names = []
-            for name in names:
-                try:
-                    txt = open(f"/proc/{tok.p.pid}/fdinfo/{name}").read()
-                except OSError:
-                    continue
-                cid = re.search(r"drm-client-id:\s+(\d+)", txt)
-                cid = cid.group(1) if cid else name
-                m = re.search(r"drm-memory-vram:\s+(\d+)\s+KiB", txt)
-                if m:
-                    clients[cid] = max(clients.get(cid, 0), int(m.group(1)) * 1024)
-            ref_peak = max(ref_peak, sum(clients.values()))
+    # Peak VRAM at the largest context any test uses (greedy_long: n_ctx
+    # 16384). Sample while the oracle actually decodes, as the harness does.
+    stopped = threading.Event()
+    peak = [0]
+
+    def watch():
+        while not stopped.is_set():
+            peak[0] = max(peak[0], _proc_vram(tok.p.pid))
             time.sleep(0.01)
-        for line in open(f"/proc/{tok.p.pid}/status"):
-            if line.startswith("VmHWM:"):
-                ref_rss = int(line.split()[1]) * 1024
-    except OSError:
-        pass
+
+    t = threading.Thread(target=watch, daemon=True)
+    t.start()
+    tok.ctx(900, 16384, "vulkan")
+    tok.eval(900, toks(8192))
+    tok.gen(900, 64, True)
+    stopped.set()
+    t.join()
+    ref_peak = peak[0]
+    ref_rss = _proc_rss_hwm(tok.p.pid)
     tok.reset(900)
 
     pp = {}
@@ -141,6 +166,8 @@ def measure_reference(no_container):
         times = []
         for _ in range(3):
             tok.ctx(901, n + 256, "vulkan")
+            tok.eval(901, toks(16))  # warm
+            tok.reset(901)
             t0 = time.perf_counter()
             tok.eval(901, toks(n))
             times.append(time.perf_counter() - t0)
@@ -150,9 +177,8 @@ def measure_reference(no_container):
     for depth in [0, 512, 2048, 4096, 8192]:
         times = []
         for _ in range(3):
-            tok.ctx(902, depth + 256, "vulkan")
-            if depth:
-                tok.eval(902, toks(depth))
+            tok.ctx(902, max(depth, 1) + 256, "vulkan")
+            tok.eval(902, toks(depth) if depth else [248044])
             t0 = time.perf_counter()
             tok.gen(902, 128, True)
             times.append(time.perf_counter() - t0)
@@ -241,8 +267,8 @@ def main():
             for k, av in res.get("perf", {}).get(kind, {}).items():
                 rv = ref[kind].get(k)
                 if rv:
-                    rows[f"{kind}{k}{' @ d'+k if kind=='tg' else ''}"] = {
-                        "agent": av, "ref": rv, "speedup": av / rv}
+                    label = f"pp{k}" if kind == "pp" else f"tg128 @ d{k}"
+                    rows[label] = {"agent": av, "ref": rv, "speedup": av / rv}
         speedups = [r["speedup"] for r in rows.values()]
         rep["perf"] = {"rows": rows, "speedup_geomean": geom(speedups),
                        "reference": ref}

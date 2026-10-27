@@ -21,7 +21,7 @@
   },
   "env": {
     "VULKAN_SDK": "/opt/vulkan-sdk",
-    "PATH": "/opt/vulkan-sdk/bin:/opt/zig:/usr/local/bin:/usr/bin:/bin",
+    "PATH": "/opt/bonsai/venv/bin:/opt/vulkan-sdk/bin:/opt/zig:/usr/local/bin:/usr/bin:/bin",
     "LD_LIBRARY_PATH": "/opt/vulkan-sdk/lib:/opt/vulkan-sdk/lib/VulkanLoader/lib",
     "VK_ICD_FILENAMES": "/usr/share/vulkan/icd.d/radeon_icd.json",
     "PYTHONPATH": "/opt/bonsai/gguf-py",

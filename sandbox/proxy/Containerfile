@@ -2,4 +2,4 @@ FROM docker.io/denoland/deno:2.9.7
 
 WORKDIR /proxy
 COPY anthropic-proxy.ts anthropic-proxy.sh /proxy/
-CMD ["/bin/sh", "/proxy/anthropic-proxy.sh"]
+CMD ["/bin/bash", "/proxy/anthropic-proxy.sh"]

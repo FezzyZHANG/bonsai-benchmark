@@ -34,7 +34,7 @@ RUN echo "197962f5cbf80baf2775a03336a01cee7c8745686c65aaa70d3f751ade4d7e43  /tmp
     && ln -sf /opt/vulkan-sdk/bin/vulkaninfo /usr/local/bin/vulkaninfo
 
 ENV VULKAN_SDK=/opt/vulkan-sdk
-ENV PATH=/opt/vulkan-sdk/bin:/opt/zig:/usr/local/bin:/usr/bin:/bin
+ENV PATH=/opt/bonsai/venv/bin:/opt/vulkan-sdk/bin:/opt/zig:/usr/local/bin:/usr/bin:/bin
 ENV LD_LIBRARY_PATH=/opt/vulkan-sdk/lib:/opt/vulkan-sdk/lib/VulkanLoader/lib
 ENV VK_LAYER_PATH=/opt/vulkan-sdk/share/vulkan/explicit_layer.d
 ENV VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/radeon_icd.json
@@ -43,7 +43,7 @@ ENV VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/radeon_icd.json
 # GGUF but intentionally has no PTQ1_0 dequantizer.
 COPY deps/gguf-py /opt/bonsai/gguf-py
 RUN python3 -m venv /opt/bonsai/venv \
-    && /opt/bonsai/venv/bin/pip install --no-cache-dir numpy safetensors
+    && /opt/bonsai/venv/bin/pip install --no-cache-dir numpy safetensors pyyaml
 ENV PYTHONPATH=/opt/bonsai/gguf-py
 
 # Claude Code, pinned to the host version.

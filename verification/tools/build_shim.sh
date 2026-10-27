@@ -11,7 +11,9 @@ cmake -S "$BENCH/verification/tools/refshim" -B "$BUILD" \
   -DLLAMA_SRC="$LLAMA_SRC" \
   -DCMAKE_BUILD_TYPE=Release
 cmake --build "$BUILD" --target bonsai -j "$NPROC"
-mkdir -p "$BENCH/deps/ref/lib"
-cp "$BUILD/libbonsai.so" "$BENCH/deps/ref/lib/libbonsai_ref.so"
-strip --strip-all "$BENCH/deps/ref/lib/libbonsai_ref.so"
-ls -lh "$BENCH/deps/ref/lib/libbonsai_ref.so"
+# Hidden calibration artifact: never install this under deps/, which is mounted
+# into the agent sandbox.
+mkdir -p "$BENCH/verification/bin"
+cp "$BUILD/libbonsai.so" "$BENCH/verification/bin/libbonsai_ref.so"
+strip --strip-all "$BENCH/verification/bin/libbonsai_ref.so"
+ls -lh "$BENCH/verification/bin/libbonsai_ref.so"

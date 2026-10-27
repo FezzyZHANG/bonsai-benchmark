@@ -26,10 +26,10 @@ produced by the CPU llama.cpp backend. The correctness score is a weighted mean:
 | suite | weight | metric |
 |---|---:|---|
 | tokenizer | 0.10 | fraction of hidden strings whose token ids match exactly |
-| dequant | 0.15 | fraction of sampled tensors whose f32 values match the safetensors exactly |
+| dequant | 0.15 | fraction of sampled tensors whose f32 values match the reference exactly (PTQ1_0 values widened from f16; F32 copied) |
 | logits | 0.30 | per prompt at n_ctx 512/2048/4096/8192: top-1 match, mean KL, cosine |
 | positions | 0.15 | hidden corpus at n_ctx 512/2048: top-1 agreement and mean KL across positions |
-| greedy | 0.30 | fraction of identical greedy token ids (64 tokens) at contexts 0/2048/8192 |
+| greedy | 0.30 | fraction of identical greedy token ids (64 tokens) after 64/2048/8192-token prompts |
 
 Reference points from the CPU-vs-Vulkan llama.cpp comparison on this machine:
 logits cosine 0.9998–0.99997, top-1 agreement 97.8–98.8%, mean KLD
@@ -57,26 +57,30 @@ Measured only after correctness acceptance:
   contexts, same greedy policy, same machine.
 - Score: geometric mean of `agent tokens/s / reference tokens/s` across the
   pp and tg tests. pp and tg results are reported separately.
-- Warmup, repeated runs, and medians are used; each perf run is also checked
-  for correctness.
+- Warmup, repeated runs, and medians are used. Performance is only scored when
+  the correctness suites pass; the perf prompts come from the hidden corpus, so
+  they cannot be special-cased.
 
 ## 4. VRAM (secondary acceptance gate)
 
-For n_ctx 512, 2048 and 8192, the harness measures peak process VRAM from
-`drm-memory-vram` in `/proc/<pid>/fdinfo` (deduplicated by DRM client id,
-polled), and peak host RSS from `VmHWM`.
+The harness polls peak process VRAM from `drm-memory-vram` in
+`/proc/<pid>/fdinfo` (deduplicated by DRM client id) across the whole run,
+including the largest context (n_ctx 16384), and reads peak host RSS from
+`VmHWM`. The reference (llama.cpp Vulkan) is measured with the same workload,
+sampling during decode.
 
-- Peak VRAM must satisfy, at every context:
+- Peak VRAM must satisfy
   `peak ≤ max(1.5 × reference_peak, reference_peak + 512 MiB)`.
 - Peak host RSS must satisfy `peak ≤ reference_RSS + 2 GiB`.
-- Peak VRAM must be at least 0.5 × the packed model size (~450 MiB) to
+- Peak VRAM must be at least ~450 MiB (half the packed model size) to
   demonstrate that the model is resident on the GPU rather than computed on
   the CPU.
 
-The c=512 test is the decisive anti-pre-dequant check: the reference peak is
-about 1.1 GiB, so a full F16 copy of the weights (about 8.4 GiB) cannot fit.
-Failing the VRAM gate sets the performance score to zero; correctness is still
-reported. The reference peak/RSS are measured by the verifier on the same GPU.
+The decisive anti-pre-dequant check is the model size: a full F16 copy of the
+weights (about 8.4 GiB) or an F32 copy (about 16.8 GiB) cannot fit under the
+gate, while the packed weights are about 0.9 GiB. Failing the VRAM gate sets
+the performance score to zero; correctness is still reported. The reference
+peak/RSS are measured by the verifier on the same GPU.
 
 ## 5. Anti-cheat and hygiene
 

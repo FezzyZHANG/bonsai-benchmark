@@ -142,7 +142,8 @@ int main() {
                 int32_t n = llama_tokenize(v, text.data(), int32_t(text.size()), nullptr, 0,
                                            add_bos != 0, true);
                 if (n < 0) n = -n;
-                std::vector<llama_token> ids(size_t(n));
+                std::vector<llama_token> ids;
+                ids.resize(size_t(n));
                 n = llama_tokenize(v, text.data(), int32_t(text.size()), ids.data(), n,
                                    add_bos != 0, true);
                 if (n < 0) throw std::runtime_error("tokenize failed");
@@ -174,7 +175,8 @@ int main() {
                 in >> id >> n;
                 auto it = g_contexts.find(id);
                 if (it == g_contexts.end()) throw std::runtime_error("unknown context");
-                std::vector<llama_token> ids(size_t(n));
+                std::vector<llama_token> ids;
+                ids.resize(size_t(n));
                 for (int i = 0; i < n; ++i) {
                     int t = 0;
                     if (!(in >> t)) throw std::runtime_error("missing token id");

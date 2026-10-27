@@ -3,7 +3,7 @@
 The benchmark runs on one machine:
 
 - GPU: **AMD Radeon RX 9070** (RDNA4, `RADV GFX1201`), 16304 MiB VRAM
-- Driver: Mesa 26.0.8 (RADV), device `apiVersion` **1.4.351**
+- Driver: Mesa 26.0.8 (RADV), device `apiVersion` **1.4.335**
 - Loader: Vulkan SDK **1.4.363.0**
 - The driver prints `radv is not a conformant Vulkan implementation, testing use only.`
   This is expected; it is the target device.

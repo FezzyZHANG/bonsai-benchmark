@@ -12,3 +12,4 @@ runs/
 *.log
 *.pyc
 __pycache__/
+verification/bin/

@@ -1,7 +1,7 @@
 # Vulkan Roadmap 2026 support on the benchmark GPU
 
 - GPU: AMD Radeon RX 9070 (RADV GFX1201), 16304 MiB
-- Driver: Mesa 26.0.8 (RADV), Vulkan `apiVersion` 1.4.351
+- Driver: Mesa 26.0.8 (RADV), Vulkan `apiVersion` 1.4.335
 - Loader: Vulkan SDK 1.4.363.0
 - Profile source: `VP_KHR_roadmap.json` shipped in the SDK (api-version 1.4.328)
 - Check: `scripts/check_roadmap2026.py` against `vulkaninfo -j` (231 device extensions)
@@ -55,4 +55,4 @@ headless inference engine never uses. Document the exact subset in the agent's
 `DEVICE.md`, and optionally generate a custom Vulkan profile JSON
 (`VP_BONSAI_COMPUTE_2026`) for the engine to validate at startup.
 
-Target API: Vulkan 1.4 (device 1.4.351 >= profile 1.4.328).
+Target API: Vulkan 1.4 (device 1.4.335 >= profile 1.4.328).

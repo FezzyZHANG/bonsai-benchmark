@@ -30,6 +30,16 @@ PNAME="bonsai-proxy-$NAME"
 ANAME="bonsai-agent-$NAME"
 RUN_TIMEOUT="${RUN_TIMEOUT:-14400}"
 
+# Optional model pin for benchmarking several models through the same proxy.
+MODEL_ENV=()
+if [ -n "${BENCH_MODEL:-}" ]; then
+  for v in ANTHROPIC_MODEL ANTHROPIC_DEFAULT_OPUS_MODEL \
+           ANTHROPIC_DEFAULT_SONNET_MODEL ANTHROPIC_DEFAULT_HAIKU_MODEL \
+           ANTHROPIC_DEFAULT_FABLE_MODEL; do
+    MODEL_ENV+=(-e "$v=$BENCH_MODEL")
+  done
+fi
+
 podman image exists "$AGENT_IMAGE" || { echo "missing image $AGENT_IMAGE; run setup.sh" >&2; exit 1; }
 podman image exists "$PROXY_IMAGE" || { echo "missing image $PROXY_IMAGE; run setup.sh" >&2; exit 1; }
 
@@ -85,6 +95,7 @@ timeout "$RUN_TIMEOUT" podman run --rm --name "$ANAME" \
   -v "$RUN/.claude.json:/root/.claude.json" \
   -e HOME=/root \
   -e CLAUDE_CONFIG_DIR=/root/.claude \
+  "${MODEL_ENV[@]}" \
   -e ANTHROPIC_BASE_URL="http://$PROXY_IP:8787" \
   -e ANTHROPIC_AUTH_TOKEN="benchmark-dummy-token" \
   -e CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1 \
