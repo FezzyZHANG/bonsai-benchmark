@@ -1,0 +1,99 @@
+# Acceptance criteria
+
+The submission is this directory as you leave it. It is accepted when it builds
+offline, implements the ABI, is correct against the CPU llama.cpp oracle, and
+passes the VRAM gate. Performance is the optimization target and is reported
+separately.
+
+## 1. Build and contract
+
+- `zig build -Doptimize=ReleaseFast` succeeds offline in a clean container and
+  produces `zig-out/lib/libbonsai.so`.
+- The library exports the ABI in `ABI.md` and loads the GGUF path supplied by
+  the harness.
+- It does not read the safetensors file or any sidecar model file at runtime,
+  does not embed model weights, does not link/execute llama.cpp or another
+  inference engine, and does not use the network.
+- All model computation uses Vulkan 1.4 with the compute subset of Roadmap 2026
+  in `DEVICE.md`. CPU is limited to tokenization/orchestration.
+- No prebuilt engine binary; only source and build scripts are submitted.
+
+## 2. Correctness (primary)
+
+Hidden prompts and corpora are different from `data/samples/`. Golden values are
+produced by the CPU llama.cpp backend. The correctness score is a weighted mean:
+
+| suite | weight | metric |
+|---|---:|---|
+| tokenizer | 0.10 | fraction of hidden strings whose token ids match exactly |
+| dequant | 0.15 | fraction of sampled tensors whose f32 values match the safetensors exactly |
+| logits | 0.30 | per prompt at n_ctx 512/2048/4096/8192: top-1 match, mean KL, cosine |
+| positions | 0.15 | hidden corpus at n_ctx 512/2048: top-1 agreement and mean KL across positions |
+| greedy | 0.30 | fraction of identical greedy token ids (64 tokens) at contexts 0/2048/8192 |
+
+Reference points from the CPU-vs-Vulkan llama.cpp comparison on this machine:
+logits cosine 0.9998–0.99997, top-1 agreement 97.8–98.8%, mean KLD
+0.0007–0.0008 nats, greedy 64 tokens 100%.
+
+Representative full-credit thresholds:
+
+- tokenizer and dequant: exact;
+- top-1 agreement ≥ 95%;
+- mean KL ≤ 0.01 nats;
+- cosine similarity ≥ 0.995;
+- greedy token match ≥ 95%.
+
+The verifier converts each component into a [0,1] score and reports the suite
+breakdown. **Acceptance requires a correctness score ≥ 0.90.** The exact
+thresholds may be tightened after calibration; the verifier is authoritative.
+
+## 3. Performance (optimization target)
+
+Measured only after correctness acceptance:
+
+- pp (prompt processing): 512/2048/4096/8192-token prompts in one eval.
+- tg (generation): 128 greedy tokens after context depths 0/512/2048/4096/8192.
+- Reference: the stripped llama.cpp **Vulkan** binary on the same GPU, same
+  contexts, same greedy policy, same machine.
+- Score: geometric mean of `agent tokens/s / reference tokens/s` across the
+  pp and tg tests. pp and tg results are reported separately.
+- Warmup, repeated runs, and medians are used; each perf run is also checked
+  for correctness.
+
+## 4. VRAM (secondary acceptance gate)
+
+For n_ctx 512, 2048 and 8192, the harness measures peak process VRAM from
+`drm-memory-vram` in `/proc/<pid>/fdinfo` (deduplicated by DRM client id,
+polled), and peak host RSS from `VmHWM`.
+
+- Peak VRAM must satisfy, at every context:
+  `peak ≤ max(1.5 × reference_peak, reference_peak + 512 MiB)`.
+- Peak host RSS must satisfy `peak ≤ reference_RSS + 2 GiB`.
+- Peak VRAM must be at least 0.5 × the packed model size (~450 MiB) to
+  demonstrate that the model is resident on the GPU rather than computed on
+  the CPU.
+
+The c=512 test is the decisive anti-pre-dequant check: the reference peak is
+about 1.1 GiB, so a full F16 copy of the weights (about 8.4 GiB) cannot fit.
+Failing the VRAM gate sets the performance score to zero; correctness is still
+reported. The reference peak/RSS are measured by the verifier on the same GPU.
+
+## 5. Anti-cheat and hygiene
+
+- The engine must derive all weights from the GGUF at the supplied path. A
+  submission that embeds weights, reads a generated sidecar, or depends on the
+  safetensors file is rejected.
+- The reference binaries are not present in the grading container; the engine
+  may not spawn them or link llama.cpp/ggml.
+- Submission size and linked libraries are checked. No network is available.
+- The engine must be deterministic for a fixed token sequence.
+- Do not modify `data/`, `docs/`, or `ref/`.
+
+## 6. Deliverable notes
+
+Leave `NOTES.md` with:
+
+- the engine design and which Vulkan features it uses,
+- known limitations and unsupported cases,
+- measured correctness and pp/tg results,
+- peak VRAM at the contexts you tested.

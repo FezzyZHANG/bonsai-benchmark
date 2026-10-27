@@ -1,0 +1,55 @@
+# Agent sandbox image: Ubuntu 26.04 + Mesa (RADV), Zig 0.17.0, Vulkan SDK
+# 1.4.363.0, Python data tools, and Claude Code. GPU devices are passed at run
+# time; docs/data/ref are mounted read-only by prepare_run.sh.
+FROM docker.io/library/ubuntu:26.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        ca-certificates curl xz-utils git less procps ripgrep \
+        python3 python3-venv python3-pip \
+        libvulkan1 mesa-vulkan-drivers vulkan-tools \
+        nodejs npm \
+    && rm -rf /var/lib/apt/lists/*
+
+# Zig 0.17.0
+COPY deps/downloads/zig-x86_64-linux-0.17.0.tar.xz /tmp/zig.tar.xz
+RUN echo "1cbe9df9f27e6b78d14ccbca43b6703a404ef79ef1c463de901d7f088d4e2026  /tmp/zig.tar.xz" | sha256sum -c - \
+    && mkdir -p /opt/zig \
+    && tar -xJf /tmp/zig.tar.xz -C /opt/zig --strip-components=1 \
+    && ln -sf /opt/zig/zig /usr/local/bin/zig \
+    && rm /tmp/zig.tar.xz
+
+# Vulkan SDK 1.4.363.0
+COPY deps/downloads/vulkansdk-linux-x86_64-1.4.363.0.tar.xz /tmp/vksdk.tar.xz
+RUN echo "197962f5cbf80baf2775a03336a01cee7c8745686c65aaa70d3f751ade4d7e43  /tmp/vksdk.tar.xz" | sha256sum -c - \
+    && mkdir -p /opt/vksdk-tmp \
+    && tar -xJf /tmp/vksdk.tar.xz -C /opt/vksdk-tmp \
+    && mv /opt/vksdk-tmp/1.4.363.0/x86_64 /opt/vulkan-sdk \
+    && rm -rf /opt/vksdk-tmp /tmp/vksdk.tar.xz \
+    && ln -sf /opt/vulkan-sdk/bin/glslc /usr/local/bin/glslc \
+    && ln -sf /opt/vulkan-sdk/bin/glslangValidator /usr/local/bin/glslangValidator \
+    && ln -sf /opt/vulkan-sdk/bin/slangc /usr/local/bin/slangc \
+    && ln -sf /opt/vulkan-sdk/bin/spirv-dis /usr/local/bin/spirv-dis \
+    && ln -sf /opt/vulkan-sdk/bin/spirv-val /usr/local/bin/spirv-val \
+    && ln -sf /opt/vulkan-sdk/bin/vulkaninfo /usr/local/bin/vulkaninfo
+
+ENV VULKAN_SDK=/opt/vulkan-sdk
+ENV PATH=/opt/vulkan-sdk/bin:/opt/zig:/usr/local/bin:/usr/bin:/bin
+ENV LD_LIBRARY_PATH=/opt/vulkan-sdk/lib:/opt/vulkan-sdk/lib/VulkanLoader/lib
+ENV VK_LAYER_PATH=/opt/vulkan-sdk/share/vulkan/explicit_layer.d
+ENV VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/radeon_icd.json
+
+# Python data environment. gguf-py comes from the Prism fork; it parses this
+# GGUF but intentionally has no PTQ1_0 dequantizer.
+COPY deps/gguf-py /opt/bonsai/gguf-py
+RUN python3 -m venv /opt/bonsai/venv \
+    && /opt/bonsai/venv/bin/pip install --no-cache-dir numpy safetensors
+ENV PYTHONPATH=/opt/bonsai/gguf-py
+
+# Claude Code, pinned to the host version.
+RUN npm install -g @anthropic-ai/claude-code@2.1.310 \
+    && npm cache clean --force \
+    && claude --version
+
+WORKDIR /workspace
+CMD ["/bin/bash"]

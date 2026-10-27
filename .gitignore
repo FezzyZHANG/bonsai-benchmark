@@ -1,0 +1,14 @@
+deps/downloads/*.tar.xz
+deps/downloads/*.part
+deps/toolchains/
+deps/docs/
+deps/data/
+deps/ref/
+deps/python/
+verification/build/
+verification/tests/golden/
+sandbox/generated/
+runs/
+*.log
+*.pyc
+__pycache__/

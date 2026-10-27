@@ -1,0 +1,17 @@
+[
+  "Hello, world!",
+  "The quick brown fox jumps over the lazy dog.",
+  "def foo(x):\n    return x + 1\n",
+  "  leading and trailing spaces  ",
+  "\n\n\tindented\ttext\t\n",
+  "日本語のテキストと中文文本",
+  "é combining mark: café",
+  "Здравствуйте, мир",
+  "👩‍💻 emoji and 🚀 rocket",
+  "<|im_start|>user\nspecial tokens<|im_end|>",
+  "a",
+  "1234567890 3.14159 -42",
+  "mixedCASE_with_under_scores-and-hyphens",
+  "lines\r\nwith\r\nCRLF",
+  "    "
+]

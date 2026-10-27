@@ -1,0 +1,268 @@
+#!/usr/bin/env python3
+"""Build a submission, run correctness/perf/VRAM tests, and write a report."""
+import argparse
+import json
+import math
+import os
+import shutil
+import subprocess
+import sys
+import tempfile
+import time
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+BENCH = os.path.dirname(HERE)
+PY = os.path.join(BENCH, "deps/python/bin/python")
+MODEL = os.path.join(BENCH, "deps/data/Ternary-Bonsai-2-4B-PTQ1_0.gguf")
+ST = os.path.join(BENCH, "deps/data/Ternary-Bonsai-2-4B-PTQ1_0-f16.safetensors")
+ORACLE = os.path.join(BENCH, "deps/ref/bin/bonsai-ref")
+GOLDEN = os.path.join(HERE, "tests/golden/manifest.json")
+AGENT_IMAGE = os.environ.get("AGENT_IMAGE", "bonsai-agent:1.0")
+
+
+def log(*a):
+    print(*a, file=sys.stderr, flush=True)
+
+
+def run(cmd, **kw):
+    log("+", " ".join(str(c) for c in cmd))
+    return subprocess.run(cmd, **kw)
+
+
+def build_submission(sub, work, no_container):
+    src = os.path.join(work, "src")
+    shutil.copytree(sub, src, ignore=shutil.ignore_patterns(
+        ".git", "zig-out", ".zig-cache", "zig-cache", ".claude", "data", "docs", "ref"))
+    if no_container:
+        zig = os.environ.get("ZIG", os.path.join(BENCH, "deps/toolchains/zig-x86_64-linux-0.17.0/zig"))
+        env = dict(os.environ, ZIG_GLOBAL_CACHE_DIR=os.path.join(work, "zig-cache"))
+        r = run([zig, "build", "-Doptimize=ReleaseFast"], cwd=src, env=env,
+                capture_output=True, text=True, timeout=3600)
+    else:
+        cache = os.path.join(work, "zig-cache")
+        os.makedirs(cache, exist_ok=True)
+        r = run(["podman", "run", "--rm", "--network=none",
+                 "-v", f"{src}:/src", "-v", f"{cache}:/cache", "-w", "/src",
+                 AGENT_IMAGE, "zig", "build", "-Doptimize=ReleaseFast"],
+                capture_output=True, text=True, timeout=3600)
+    lib = os.path.join(src, "zig-out/lib/libbonsai.so")
+    ok = r.returncode == 0 and os.path.exists(lib)
+    return lib if ok else None, (r.stdout + r.stderr)[-5000:]
+
+
+def ensure_golden():
+    if os.path.exists(GOLDEN):
+        return
+    log("golden data missing; generating with CPU oracle (this takes a few minutes)")
+    os.makedirs(os.path.dirname(GOLDEN), exist_ok=True)
+    r = run([PY, os.path.join(HERE, "tools/generate_golden.py"),
+             "--model", MODEL, "--oracle", ORACLE, "--safetensors", ST,
+             "--tests", os.path.join(HERE, "tests"), "--out", os.path.dirname(GOLDEN)],
+            timeout=3600)
+    if r.returncode != 0:
+        raise SystemExit("golden generation failed")
+
+
+def run_harness(lib, out_json, no_container, skip_perf):
+    if no_container:
+        cmd = [PY, os.path.join(HERE, "harness/agent_harness.py"),
+               "--library", lib, "--model", MODEL, "--golden", GOLDEN, "--out", out_json]
+        if skip_perf:
+            cmd.append("--skip-perf")
+        r = run(cmd, timeout=7200)
+    else:
+        cache = os.path.dirname(lib)
+        cmd = ["podman", "run", "--rm", "--device", "/dev/dri", "--group-add", "keep-groups",
+               "--security-opt", "label=disable", "--network=none",
+               "-v", f"{lib}:/libbonsai.so:ro",
+               "-v", f"{MODEL}:/model.gguf:ro",
+               "-v", f"{os.path.dirname(GOLDEN)}:/golden:ro",
+               "-v", f"{HERE}/harness:/harness:ro",
+               "-v", f"{os.path.dirname(out_json)}:/out",
+               AGENT_IMAGE, "/opt/bonsai/venv/bin/python", "/harness/agent_harness.py",
+               "--library", "/libbonsai.so", "--model", "/model.gguf",
+               "--golden", "/golden/manifest.json", "--out", f"/out/{os.path.basename(out_json)}"]
+        if skip_perf:
+            cmd.append("--skip-perf")
+        r = run(cmd, timeout=7200)
+    if r.returncode != 0:
+        raise SystemExit(f"harness failed (exit {r.returncode})")
+
+
+def measure_reference(no_container):
+    """Measure reference Vulkan pp/tg and peak VRAM/RSS on this machine."""
+    sys.path.insert(0, os.path.join(HERE, "tools"))
+    from ref_client import RefClient
+    tok = RefClient(ORACLE, stderr_path=None)
+    tok.load(MODEL)
+    corpus = json.load(open(GOLDEN))["corpus_tokens"]
+    prompts = {}
+    def toks(n):
+        if n == 0:
+            return []
+        r = (n + len(corpus) - 1) // len(corpus)
+        return (corpus * r)[:n]
+
+    # Reference VRAM at the largest context (cap is applied against this).
+    tok.ctx(900, 8192, "vulkan")
+    tok.eval(900, toks(512)[:0])  # ensure context exists
+    time.sleep(0.2)
+    ref_peak = 0
+    ref_rss = 0
+    try:
+        import re
+        for _ in range(30):
+            clients = {}
+            try:
+                names = os.listdir(f"/proc/{tok.p.pid}/fdinfo")
+            except OSError:
+                names = []
+            for name in names:
+                try:
+                    txt = open(f"/proc/{tok.p.pid}/fdinfo/{name}").read()
+                except OSError:
+                    continue
+                cid = re.search(r"drm-client-id:\s+(\d+)", txt)
+                cid = cid.group(1) if cid else name
+                m = re.search(r"drm-memory-vram:\s+(\d+)\s+KiB", txt)
+                if m:
+                    clients[cid] = max(clients.get(cid, 0), int(m.group(1)) * 1024)
+            ref_peak = max(ref_peak, sum(clients.values()))
+            time.sleep(0.01)
+        for line in open(f"/proc/{tok.p.pid}/status"):
+            if line.startswith("VmHWM:"):
+                ref_rss = int(line.split()[1]) * 1024
+    except OSError:
+        pass
+    tok.reset(900)
+
+    pp = {}
+    for n in [512, 2048, 4096, 8192]:
+        times = []
+        for _ in range(3):
+            tok.ctx(901, n + 256, "vulkan")
+            t0 = time.perf_counter()
+            tok.eval(901, toks(n))
+            times.append(time.perf_counter() - t0)
+            tok.reset(901)
+        pp[str(n)] = n / sorted(times)[1]
+    tg = {}
+    for depth in [0, 512, 2048, 4096, 8192]:
+        times = []
+        for _ in range(3):
+            tok.ctx(902, depth + 256, "vulkan")
+            if depth:
+                tok.eval(902, toks(depth))
+            t0 = time.perf_counter()
+            tok.gen(902, 128, True)
+            times.append(time.perf_counter() - t0)
+            tok.reset(902)
+        tg[str(depth)] = 128 / sorted(times)[1]
+    tok.close()
+    return {"pp": pp, "tg": tg, "vram_peak_bytes": ref_peak, "host_peak_rss_bytes": ref_rss}
+
+
+def geom(vals):
+    vals = [v for v in vals if v and v > 0]
+    return math.exp(sum(math.log(v) for v in vals) / len(vals)) if vals else 0.0
+
+
+def write_report(rep, out):
+    os.makedirs(out, exist_ok=True)
+    with open(os.path.join(out, "report.json"), "w") as f:
+        json.dump(rep, f, indent=1)
+    c = rep.get("correctness", {})
+    L = ["# bonsai-vk verification report", ""]
+    L.append(f"- build: **{'ok' if rep.get('build_ok') else 'FAILED'}**")
+    if not rep.get("build_ok"):
+        L += ["", "```", rep.get("build_log", ""), "```"]
+    else:
+        L.append(f"- **correctness (primary): {c.get('score', 0):.4f}** "
+                 f"({'accepted' if c.get('accepted') else 'below 0.90 gate'})")
+        for k, v in c.get("suites", {}).items():
+            L.append(f"  - {k}: {v:.4f}")
+        p = rep.get("perf", {})
+        if p.get("speedup_geomean") is not None:
+            L.append(f"- performance: geomean speedup vs llama.cpp Vulkan = {p['speedup_geomean']:.3f}")
+            L += ["", "| test | agent t/s | reference t/s | speedup |", "|---|---:|---:|---:|"]
+            for k, v in p.get("rows", {}).items():
+                L.append(f"| {k} | {v['agent']:.2f} | {v['ref']:.2f} | {v['speedup']:.3f} |")
+        v = rep.get("vram", {})
+        if v:
+            L.append(f"- VRAM: agent peak {v.get('agent_peak_bytes', 0)/2**20:.1f} MiB, "
+                     f"reference {v.get('ref_peak_bytes', 0)/2**20:.1f} MiB, "
+                     f"gate {'PASS' if v.get('passed') else 'FAIL'}")
+    with open(os.path.join(out, "report.md"), "w") as f:
+        f.write("\n".join(L) + "\n")
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("submission")
+    ap.add_argument("--out", default=None)
+    ap.add_argument("--skip-perf", action="store_true")
+    ap.add_argument("--no-container", action="store_true")
+    ap.add_argument("--library", help="prebuilt library (debug/calibration)")
+    args = ap.parse_args()
+
+    sub = os.path.abspath(args.submission)
+    out = os.path.abspath(args.out or sub + "-report")
+    work = tempfile.mkdtemp(prefix="bonsai-verify-")
+    rep = {"submission": sub, "started": time.strftime("%Y-%m-%d %H:%M:%S")}
+
+    ensure_golden()
+    if args.library:
+        lib, err = os.path.abspath(args.library), None
+    else:
+        lib, err = build_submission(sub, work, args.no_container)
+    rep["build_ok"] = lib is not None
+    rep["build_log"] = err or ""
+    if lib is None:
+        write_report(rep, out)
+        log(f"build failed; report in {out}")
+        return 1
+
+    harness_json = os.path.join(work, "agent_result.json")
+    try:
+        run_harness(lib, harness_json, args.no_container, args.skip_perf)
+    except SystemExit as e:
+        rep["harness_error"] = str(e)
+        write_report(rep, out)
+        return 1
+    res = json.load(open(harness_json))
+    rep["correctness"] = res["correctness"]
+    rep["agent_vram_peak_bytes"] = res.get("vram_peak_bytes")
+    rep["agent_host_rss_bytes"] = res.get("host_peak_rss_bytes")
+
+    if not args.skip_perf:
+        ref = measure_reference(args.no_container)
+        rows = {}
+        for kind in ("pp", "tg"):
+            for k, av in res.get("perf", {}).get(kind, {}).items():
+                rv = ref[kind].get(k)
+                if rv:
+                    rows[f"{kind}{k}{' @ d'+k if kind=='tg' else ''}"] = {
+                        "agent": av, "ref": rv, "speedup": av / rv}
+        speedups = [r["speedup"] for r in rows.values()]
+        rep["perf"] = {"rows": rows, "speedup_geomean": geom(speedups),
+                       "reference": ref}
+
+        ref_peak = ref.get("vram_peak_bytes", 0)
+        ref_rss = ref.get("host_peak_rss_bytes", 0)
+        cap = max(1.5 * ref_peak, ref_peak + 512 * 2**20)
+        rss_cap = ref_rss + 2 * 2**30
+        ap_peak = res.get("vram_peak_bytes", 0)
+        ok = ap_peak <= cap and ap_peak >= 450 * 2**20 and res.get("host_peak_rss_bytes", 0) <= rss_cap
+        rep["vram"] = {"agent_peak_bytes": ap_peak, "ref_peak_bytes": ref_peak,
+                       "cap_bytes": cap, "agent_host_rss_bytes": res.get("host_peak_rss_bytes"),
+                       "rss_cap_bytes": rss_cap, "passed": ok}
+        if not ok:
+            rep["perf"]["speedup_geomean"] = 0.0
+
+    write_report(rep, out)
+    log(f"report in {out}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

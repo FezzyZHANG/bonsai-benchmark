@@ -1,0 +1,13 @@
+deps/toolchains
+deps/docs
+deps/data
+deps/ref
+deps/python
+reports
+runs
+agent
+verification
+sandbox/generated
+models
+exports
+.git

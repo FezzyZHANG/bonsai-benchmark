@@ -1,0 +1,9 @@
+profile api-version: 1.4.328
+device apiVersion  : 4211023
+extensions on device: 231
+missing requirement groups: 5
+  - feature VkPhysicalDeviceVulkan14Features.hostImageCopy = False, required True
+  - extension VK_KHR_copy_memory_indirect missing
+  - extension VK_KHR_present_mode_fifo_latest_ready missing
+  - feature VkPhysicalDeviceCopyMemoryIndirectFeaturesKHR.indirectMemoryCopy missing
+  - feature VkPhysicalDevicePresentModeFifoLatestReadyFeaturesKHR.presentModeFifoLatestReady missing
