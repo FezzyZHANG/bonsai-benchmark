@@ -20,8 +20,9 @@ separately.
 
 ## 2. Correctness (primary)
 
-Hidden prompts and corpora are different from `data/samples/`. Golden values are
-produced by the CPU llama.cpp backend. The correctness score is a weighted mean:
+Hidden prompts and corpora are different from `data/samples/`. Golden values
+are precomputed by the verifier with the CPU llama.cpp backend; grading does
+not run CPU inference. The correctness score is a weighted mean:
 
 | suite | weight | metric |
 |---|---:|---|

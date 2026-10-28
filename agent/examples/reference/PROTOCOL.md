@@ -41,6 +41,11 @@ Notes:
 - `gen` selects argmax at each step and appends the token; no sampling
   parameters.
 - All state is deterministic for a fixed sequence.
+- The CPU backend is memory-bandwidth-bound on this machine: expect tens of
+  tokens/s, versus hundreds on the Vulkan backend (and thousands for prefill).
+  Use `cpu` for tokenizer, metadata and short spot checks; use `vulkan` for
+  iteration. The grader compares against precomputed CPU golden values, so you
+  do not need to run CPU inference to be graded.
 
 `llama-cli`, `llama-debug` and `llama-perplexity` are also provided for
 ad-hoc reference runs; `llama-cli -ngl 0` uses the CPU backend and

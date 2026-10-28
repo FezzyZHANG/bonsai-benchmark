@@ -47,10 +47,11 @@ cmake -S "$BENCH/verification/tools/oracle" -B "$BUILD/oracle-cpu" \
   -DORACLE_CPU=ON \
   -DCMAKE_BUILD_TYPE=Release
 cmake --build "$BUILD/oracle-cpu" --target bonsai-ref -j "$NPROC"
-cp "$BUILD/oracle-cpu/bonsai-ref" "$OUT/bonsai-ref-cpu"
-strip --strip-all "$OUT/bonsai-ref-cpu"
+# The CPU-only oracle is hidden (golden generation); agents use the CPU mode
+# of bonsai-ref for spot checks and Vulkan for iteration.
+strip --strip-all "$BUILD/oracle-cpu/bonsai-ref"
 mkdir -p "$BENCH/verification/bin"
-cp "$OUT/bonsai-ref-cpu" "$BENCH/verification/bin/bonsai-ref-cpu"
+cp "$BUILD/oracle-cpu/bonsai-ref" "$BENCH/verification/bin/bonsai-ref-cpu"
 
 # Calibration ABI shim (hidden; built with PIC static libs). It is a complete
 # ABI implementation on top of llama.cpp, so it must never be visible to the

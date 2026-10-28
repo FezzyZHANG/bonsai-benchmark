@@ -68,12 +68,13 @@ Everything is offline. Available tools and data:
 
 ## Correctness and scoring
 
-Correctness is the primary acceptance criterion; it is measured against the
-CPU llama.cpp backend, using the same methodology as the reference
-CPU-vs-Vulkan comparison (tokenizer IDs, dequantized tensors, logits, per-position
-agreement, greedy tokens). Performance is the optimization target; VRAM is a
-secondary acceptance gate. The exact metrics and representative thresholds are
-in `ACCEPTANCE.md`. Hidden tests use prompts and corpora not present here.
+Correctness is the primary acceptance criterion; it is measured against
+precomputed CPU llama.cpp golden values, using the same methodology as the
+reference CPU-vs-Vulkan comparison (tokenizer IDs, dequantized tensors, logits,
+per-position agreement, greedy tokens). Grading does not run CPU inference.
+Performance is the optimization target; VRAM is a secondary acceptance gate. The
+exact metrics and reference thresholds are in `ACCEPTANCE.md`. Hidden tests use
+prompts and corpora not present here.
 
 Do not modify `data/`, `docs/`, or `ref/`.
 
