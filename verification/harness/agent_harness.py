@@ -6,6 +6,7 @@ import json
 import math
 import os
 import re
+import resource
 import sys
 import threading
 import time
@@ -101,6 +102,16 @@ class Engine:
             self.err("tensor_count")
         return n
 
+    def tensor_info(self, index):
+        name = ctypes.c_char_p()
+        typ = ctypes.c_int32()
+        rank = ctypes.c_int32()
+        ne = (ctypes.c_int64 * 4)()
+        if self.lib.bonsai_tensor_info(self.model, index, ctypes.byref(name),
+                                       ctypes.byref(typ), ctypes.byref(rank), ne) != 0:
+            self.err(f"tensor_info({index})")
+        return name.value, typ.value, rank.value, list(ne)
+
     def tensor_dequant(self, name, shape):
         arr = np.empty(int(np.prod(shape)), dtype=np.float32)
         r = self.lib.bonsai_tensor_dequant(self.model, name.encode(),
@@ -170,6 +181,38 @@ def _proc_vram(pid=None):
     return sum(clients.values())
 
 
+def _child_usage():
+    """Resources consumed by child processes (Linux RUSAGE_CHILDREN)."""
+    r = resource.getrusage(resource.RUSAGE_CHILDREN)
+    return {"cpu_s": r.ru_utime + r.ru_stime, "maxrss_kb": r.ru_maxrss}
+
+
+def _live_children(pid=None):
+    """Processes whose parent is this process; threads do not appear here."""
+    pid = pid or os.getpid()
+    out = []
+    try:
+        names = os.listdir("/proc")
+    except OSError:
+        return out
+    for name in names:
+        if not name.isdigit():
+            continue
+        try:
+            with open(f"/proc/{name}/status") as f:
+                ppid, comm = None, ""
+                for line in f:
+                    if line.startswith("PPid:"):
+                        ppid = int(line.split()[1])
+                    elif line.startswith("Name:"):
+                        comm = line.split(None, 1)[1].strip()
+            if ppid == pid:
+                out.append({"pid": int(name), "name": comm})
+        except (OSError, ValueError):
+            continue
+    return out
+
+
 def _vm_hwm():
     try:
         for line in open("/proc/self/status"):
@@ -213,7 +256,8 @@ def logit_stats(gold, got):
     top1 = int(np.argmax(a) == np.argmax(b))
     eps = 1e-300
     kl = float(np.sum(pa * np.log((pa + eps) / (pb + eps))))
-    cos = float(a @ b / (np.linalg.norm(a) * np.linalg.norm(b)))
+    na, nb = float(np.linalg.norm(a)), float(np.linalg.norm(b))
+    cos = float(a @ b / (na * nb)) if na > 0 and nb > 0 else 0.0
     return top1, kl, cos
 
 
@@ -239,20 +283,35 @@ def suite_tokenizer(eng, golden):
 
 def suite_dequant(eng, golden, golden_dir):
     cases = golden["dequant"]
+    info = {}
+    for i in range(eng.tensor_count()):
+        name, typ, rank, ne = eng.tensor_info(i)
+        info[name] = (typ, rank, ne)
     exact = 0
     details = []
     for c in cases:
         ref = np.load(os.path.join(golden_dir, c["file"]))
         # Golden stores the dequantized f16 values; the ABI returns f32. The
         # widening is exact (ternary weights, fp16 scale), so compare f32 bits.
-        if ref.dtype == np.float16:
+        is_f16 = ref.dtype == np.float16
+        if is_f16:
             ref = ref.astype(np.float32)
         got = eng.tensor_dequant(c["name"], ref.shape)
         ok = got.shape == ref.shape and np.array_equal(got.view(np.uint32), ref.view(np.uint32))
-        exact += int(ok)
-        details.append({"name": c["name"], "shape": c["shape"], "ok": ok})
+        # Tensor metadata: PTQ1_0 = 143, F32 = 0; ne is reversed vs safetensors.
+        want_typ = 143 if is_f16 else 0
+        want_ne = list(reversed(ref.shape)) + [1] * (4 - ref.ndim)
+        meta = info.get(c["name"].encode())
+        info_ok = meta is not None and meta[0] == want_typ and meta[1] == ref.ndim \
+            and meta[2][:ref.ndim] == want_ne[:ref.ndim]
+        exact += int(ok and info_ok)
+        details.append({"name": c["name"], "shape": c["shape"], "ok": bool(ok),
+                        "info_ok": bool(info_ok),
+                        "info": None if meta is None else
+                        {"type": meta[0], "rank": meta[1], "ne": meta[2]}})
     score = exact / len(cases) if cases else 0.0
-    return score, {"exact": exact, "total": len(cases), "details": details}
+    return score, {"exact": exact, "total": len(cases), "tensors": len(info),
+                   "details": details}
 
 
 def suite_logits(eng, golden, golden_dir):
@@ -343,7 +402,7 @@ def suite_greedy(eng, golden):
     return score, {"matched": same, "total": total, "cases": details}
 
 
-def run_perf(eng, corpus_tokens, reps=3):
+def run_perf(eng, corpus_tokens, reps=5):
     def prompt_of(n):
         if n == 0:
             return []
@@ -400,9 +459,25 @@ def main():
 
     def finish():
         mon.stop()
+        child = _child_usage()
+        kids = _live_children()
         result["vram_peak_bytes"] = mon.peak
         result["host_peak_rss_bytes"] = _vm_hwm()
         result["wall_s"] = time.perf_counter() - t0
+        result["child_processes"] = {"cpu_s": child["cpu_s"],
+                                     "maxrss_kb": child["maxrss_kb"], "live": kids}
+        # The ABI allows worker threads, not child processes. Spawning (or
+        # daemonizing) a helper is how an embedded foreign engine would be run.
+        if child["cpu_s"] > 0.01 or child["maxrss_kb"] > 0 or kids:
+            msg = ("engine spawned child processes; the ABI allows threads only "
+                   f"(cpu_s={child['cpu_s']:.3f}, maxrss_kb={child['maxrss_kb']}, live={kids})")
+            c = result.get("correctness") or {"score": 0.0, "suites": {},
+                                              "details": {}, "accepted": False}
+            c["details"] = dict(c.get("details") or {}, cheat=msg)
+            c["score"] = 0.0
+            c["accepted"] = False
+            result["correctness"] = c
+            print(msg, flush=True)
         with open(args.out, "w") as f:
             json.dump(result, f, indent=1)
         print(json.dumps({k: result.get(k) for k in

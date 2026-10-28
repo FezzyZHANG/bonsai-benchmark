@@ -7,9 +7,11 @@ benchmark hardening:
   container has no other route
 - only forwards `POST /v1/messages`, `POST /v1/messages/count_tokens` and
   `GET /v1/models` by default (`ALLOWED_PATHS`, `ALLOWED_METHODS`)
-- optional `MAX_REQUESTS` budget (default 2000)
+- optional `MAX_REQUESTS` budget (`0` = unlimited, the script default; the run
+  script sets 10000)
 - `LOG_BODIES=0` disables request/response body logging (default on in the
-  script; the run script sets it to 0)
+  script; the run script sets it to 0). Authorization headers are replaced by
+  `<redacted>` in logs either way.
 - `AUTH_HEADER=authorization|x-api-key|both` selects the upstream auth header
   (default `authorization`, which is what Claude Code/DeepSeek use)
 - `GET /__proxy_health` is a readiness endpoint and does not consume budget

@@ -51,7 +51,10 @@ is a secondary gate to prevent pre-dequantization.
 `setup.sh` is idempotent. It verifies the Zig and Vulkan SDK archives against
 `deps/downloads/SHA256SUMS`, populates the docs, links/copies the GGUF and the
 F16 safetensors, builds the static stripped llama.cpp reference binaries and
-the `bonsai-ref` oracle, and builds:
+the `bonsai-ref` oracle. The reference build needs the Prism fork at
+`../bonsai-investigation/llama.cpp-prism` (branch `prism` of
+`https://github.com/PrismML-Eng/llama.cpp`) or `LLAMA_SRC=/path/to/fork`.
+Unless skipped, it also builds:
 
 - `bonsai-agent:1.0` — Ubuntu 26.04, Mesa 26.0.8/RADV, Zig 0.17.0, Vulkan SDK
   1.4.363.0, Python env, Claude Code 2.1.310
@@ -132,6 +135,15 @@ design the tests and calibration:
 
 ## Status
 
-Investigation complete; benchmark scaffold, reference toolchain, container
-image, ABI, harness and calibration are being implemented. See `reports/` for
-the Roadmap 2026 support notes and the initial performance/agreement study.
+The benchmark is implemented and calibrated end to end:
+
+- golden data generated with the CPU-only oracle (hidden, `verification/tests/golden/`);
+- ABI stub scores 0.000, the llama.cpp calibration shim scores 0.995 on both
+  Vulkan (host and grading container) and CPU;
+- the Vulkan shim measures ~1.0× the reference performance, and its peak VRAM
+  is 1968 MiB against a 2950 MiB gate;
+- the agent sandbox was validated against a mock Messages API (tool use, GPU
+  access, credential isolation, no egress).
+
+See `reports/calibration.md` for the numbers and `reports/roadmap2026_support.md`
+for the Roadmap 2026 device check.

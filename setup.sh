@@ -87,8 +87,15 @@ fi
 # --- Python data environment -------------------------------------------------
 if [ ! -x deps/python/bin/python ]; then
   log "create deps/python"
-  python3 -m venv deps/python
-  deps/python/bin/pip install --no-cache-dir numpy safetensors
+  if python3 -m venv deps/python 2>/dev/null; then
+    deps/python/bin/pip install --no-cache-dir numpy safetensors
+  else
+    # Some distros ship venv without ensurepip; fall back to uv.
+    command -v uv >/dev/null || { echo "venv failed and uv is missing" >&2; exit 1; }
+    rm -rf deps/python
+    uv venv deps/python
+    uv pip install --python deps/python/bin/python numpy safetensors
+  fi
 fi
 
 # --- data --------------------------------------------------------------------
@@ -138,6 +145,9 @@ PY
 fi
 
 # --- reference binaries ------------------------------------------------------
+# Needs the Prism llama.cpp fork. It defaults to $INV/llama.cpp-prism; set
+# LLAMA_SRC to override, e.g. after cloning
+# https://github.com/PrismML-Eng/llama.cpp (branch prism).
 if [ "$SKIP_REF" = 0 ]; then
   LLAMA_SRC="${LLAMA_SRC:-$INV/llama.cpp-prism}" verification/tools/build_ref.sh
 fi

@@ -32,7 +32,7 @@ def run(cmd, **kw):
     return subprocess.run(cmd, **kw)
 
 
-MAX_SUBMISSION_BYTES = 256 * 2**20
+MAX_SUBMISSION_BYTES = 32 * 2**20
 
 
 def submission_size(sub):
@@ -64,6 +64,7 @@ def build_submission(sub, work, no_container):
         os.makedirs(cache, exist_ok=True)
         r = run(["podman", "run", "--rm", "--network=none",
                  "-v", f"{src}:/src", "-v", f"{cache}:/cache", "-w", "/src",
+                 "-e", "ZIG_GLOBAL_CACHE_DIR=/cache",
                  AGENT_IMAGE, "zig", "build", "-Doptimize=ReleaseFast"],
                 capture_output=True, text=True, timeout=3600)
     lib = os.path.join(src, "zig-out/lib/libbonsai.so")
@@ -183,7 +184,7 @@ def measure_reference(no_container):
     pp = {}
     for n in [512, 2048, 4096, 8192]:
         times = []
-        for _ in range(3):
+        for _ in range(5):
             tok.ctx(901, n + 256, "vulkan")
             tok.eval(901, toks(16))  # warm
             tok.reset(901)
@@ -191,18 +192,18 @@ def measure_reference(no_container):
             tok.eval(901, toks(n))
             times.append(time.perf_counter() - t0)
             tok.reset(901)
-        pp[str(n)] = n / sorted(times)[1]
+        pp[str(n)] = n / sorted(times)[len(times) // 2]
     tg = {}
     for depth in [0, 512, 2048, 4096, 8192]:
         times = []
-        for _ in range(3):
+        for _ in range(5):
             tok.ctx(902, max(depth, 1) + 256, "vulkan")
             tok.eval(902, toks(depth) if depth else [248044])
             t0 = time.perf_counter()
             tok.gen(902, 128, True)
             times.append(time.perf_counter() - t0)
             tok.reset(902)
-        tg[str(depth)] = 128 / sorted(times)[1]
+        tg[str(depth)] = 128 / sorted(times)[len(times) // 2]
     tok.close()
     return {"pp": pp, "tg": tg, "vram_peak_bytes": ref_peak, "host_peak_rss_bytes": ref_rss}
 
@@ -226,6 +227,9 @@ def write_report(rep, out):
                  f"({'accepted' if c.get('accepted') else 'below 0.90 gate'})")
         for k, v in c.get("suites", {}).items():
             L.append(f"  - {k}: {v:.4f}")
+        err = c.get("details", {}).get("error")
+        if err:
+            L.append(f"- harness error: `{err}`")
         p = rep.get("perf", {})
         if p.get("speedup_geomean") is not None:
             L.append(f"- performance: geomean speedup vs llama.cpp Vulkan = {p['speedup_geomean']:.3f}")

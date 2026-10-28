@@ -37,7 +37,7 @@ logits cosine 0.9998–0.99997, top-1 agreement 97.8–98.8%, mean KLD
 sequences diverge after the first flipped token, so sequence equality is not a
 useful metric at long context).
 
-Representative full-credit thresholds:
+Reference (full-credit) operating points:
 
 - tokenizer and dequant: exact;
 - top-1 agreement ≥ 95%;
@@ -47,8 +47,9 @@ Representative full-credit thresholds:
   test).
 
 The verifier converts each component into a [0,1] score and reports the suite
-breakdown. **Acceptance requires a correctness score ≥ 0.90.** The exact
-thresholds may be tightened after calibration; the verifier is authoritative.
+breakdown. **Acceptance requires a correctness score ≥ 0.90.** The CPU-vs-Vulkan
+llama.cpp reference scores about 0.99 under this formula. The verifier is
+authoritative.
 
 ## 3. Performance (optimization target)
 
@@ -92,9 +93,13 @@ peak/RSS are measured by the verifier on the same GPU.
   safetensors file is rejected.
 - The reference binaries are not present in the grading container; the engine
   may not spawn them or link llama.cpp/ggml.
-- The submission source must be under 256 MiB (excluding `data/`, `docs/`,
-  `ref/` and Zig build outputs); embedding model weights or generated data is
-  rejected. Linked libraries are checked. No network is available.
+- The submission source must be under 32 MiB (excluding `data/`, `docs/`,
+  `ref/` and Zig build outputs); embedding model weights, a foreign engine
+  binary or generated data is rejected. Linked libraries are checked. No
+  network is available.
+- The ABI permits worker threads, not child processes. The harness records
+  `RUSAGE_CHILDREN` and live children of the grading process; a library that
+  spawns a helper process (for example an embedded engine binary) scores zero.
 - The engine must be deterministic for a fixed token sequence.
 - Do not modify `data/`, `docs/`, or `ref/`.
 
