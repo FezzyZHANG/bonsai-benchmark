@@ -60,6 +60,14 @@ Everything is offline. Available tools and data:
   this GPU; the CPU backend is memory-bandwidth-bound at roughly 10–35 token/s,
   so reserve it for tokenizer checks and short spot checks. `ref/PROTOCOL.md`
   describes the line protocol.
+- **Reference use — black box.** Run the reference binaries through their
+  documented CLI and line protocol only. Do **not** disassemble, decompile,
+  debug, or otherwise analyze the binaries, and do not read them with `strings`,
+  `nm`, `readelf`, `objdump`, `llvm-objdump`, `gdb`, `lldb`, custom ELF parsers
+  or disassembler bindings; do not link to or reuse their code. Recover the
+  architecture from the GGUF, the safetensors development copy and the
+  documented runner output. Treating `ref/bin` as anything other than a
+  black-box oracle is non-compliant.
 - **Docs**: `docs/` contains the Vulkan 1.4 spec, Roadmap 2026 appendix and
   profile, SPIR-V/GLSL specs, GGUF spec, Vulkan Profiles overview, and Zig docs.
 
