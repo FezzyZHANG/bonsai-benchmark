@@ -7,11 +7,15 @@
       "Glob",
       "Grep",
       "Edit(//workspace/**)",
-      "Write(//workspace/**)"
+      "Write(//workspace/**)",
+      "NotebookEdit(//workspace/**)"
     ],
     "deny": [
       "WebFetch",
-      "WebSearch"
+      "WebSearch",
+      "Read(~/.claude/**)",
+      "Read(~/.claude.json)",
+      "Read(~/.ssh/**)"
     ],
     "blockReadsOutsideWorkingDirectories": true,
     "disableBypassPermissionsMode": "disable"

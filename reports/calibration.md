@@ -53,23 +53,25 @@ the same amount, confirming the floor is batch numerics, not the backend.
 
 ## Performance and VRAM
 
-Vulkan shim vs the stripped llama.cpp Vulkan reference (same GPU, same
-contexts, 5 repetitions, median):
+Vulkan shim vs the stripped llama.cpp Vulkan reference, measured through the
+grading path (harness inside the GPU container, reference on the host; same
+GPU/contexts, 5 repetitions, median):
 
 | test | agent t/s | reference t/s | speedup |
 |---|---:|---:|---:|
-| pp512 | 2623.10 | 2639.99 | 0.994 |
-| pp2048 | 3512.69 | 2651.79 | 1.325 |
-| pp4096 | 3015.41 | 2994.63 | 1.007 |
-| pp8192 | 2744.02 | 2737.29 | 1.002 |
-| tg128 @ d0 | 179.20 | 181.10 | 0.990 |
-| tg128 @ d512 | 182.39 | 183.51 | 0.994 |
-| tg128 @ d2048 | 140.65 | 177.65 | 0.792 |
-| tg128 @ d4096 | 137.01 | 137.28 | 0.998 |
-| tg128 @ d8192 | 131.63 | 131.77 | 0.999 |
+| pp512 | 2595.87 | 2602.00 | 0.998 |
+| pp2048 | 3552.00 | 2651.30 | 1.340 |
+| pp4096 | 2997.80 | 2997.16 | 1.000 |
+| pp8192 | 2747.07 | 2739.52 | 1.003 |
+| tg128 @ d0 | 178.26 | 181.68 | 0.981 |
+| tg128 @ d512 | 182.96 | 183.51 | 0.997 |
+| tg128 @ d2048 | 140.65 | 178.50 | 0.788 |
+| tg128 @ d4096 | 137.54 | 136.82 | 1.005 |
+| tg128 @ d8192 | 131.51 | 131.50 | 1.000 |
 
-Geometric mean: **1.003**. Both sides are the same llama.cpp code, so ~1.0 is
-the expected result. The pp2048 and tg@d2048 rows are measurement outliers
+Geometric mean: **1.004**. A host-path repeat gave 1.003 with the same VRAM
+within 0.1 MiB. Both sides are the same llama.cpp code, so ~1.0 is the expected
+result. The pp2048 and tg@d2048 rows are measurement outliers
 (batching/scheduling and clock noise); the geometric mean is what is scored.
 
 VRAM/RSS (reference sampled during decode at n_ctx 16384; agent peak sampled
@@ -77,7 +79,7 @@ across the whole run, largest context 16384):
 
 - agent peak VRAM 1978.8 MiB; reference 1967.1 MiB; cap
   `max(1.5x, ref + 512 MiB)` = 2950.6 MiB -> **PASS**
-- agent host RSS 1333.0 MiB; cap reference RSS + 2 GiB = 4089.4 MiB -> **PASS**
+- agent host RSS 1333 MiB; cap reference RSS + 2 GiB = 4089.4 MiB -> **PASS**
 - lower bound (half the packed model, ~450 MiB) -> **PASS**
 
 Pre-dequantized weights cannot pass: an F16 copy is about 8.4 GiB and an F32

@@ -100,6 +100,48 @@ container). `RUN_TIMEOUT` bounds the run (default 2 h).
   workspace writes and the WebFetch denial, without spending real API calls or
   exposing a credential.
 
+### Model and cost tuning
+
+`run_agent.sh` sets Claude Code's cost and model knobs from `BENCH_*` variables
+(same names as in the wasm2llvm runs). The effective configuration is written
+to `RUN_NAME.tuning`.
+
+| variable | default | Claude Code variable |
+|---|---|---|
+| `BENCH_MODEL` | unset | `ANTHROPIC_MODEL` + `ANTHROPIC_DEFAULT_*_MODEL` |
+| `BENCH_EFFORT` | provider default | `CLAUDE_CODE_EFFORT_LEVEL` (low, medium, high, xhigh, max) |
+| `BENCH_COMPACT_WINDOW` | auto | `CLAUDE_CODE_AUTO_COMPACT_WINDOW` (100k–1M) |
+| `BENCH_MAX_CONTEXT` | model default | `CLAUDE_CODE_MAX_CONTEXT_TOKENS` |
+| `BENCH_MAX_OUTPUT` | model default | `CLAUDE_CODE_MAX_OUTPUT_TOKENS` |
+| `BENCH_MAX_TURNS` | unlimited | `CLAUDE_CODE_MAX_TURNS` |
+| `BENCH_MAX_SUBAGENTS` | 1 | `CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS` |
+| `BENCH_MAX_SUBAGENTS_PER_SESSION` | 8 | `CLAUDE_CODE_MAX_SUBAGENTS_PER_SESSION` |
+| `BENCH_MAX_SUBAGENT_DEPTH` | 1 | `CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH` |
+| `BENCH_DISABLE_EXPLORE_PLAN_AGENTS` | 1 | `CLAUDE_CODE_DISABLE_EXPLORE_PLAN_AGENTS` |
+| `BENCH_SUBAGENT_MODEL` | `inherit` | `CLAUDE_CODE_SUBAGENT_MODEL` |
+| `BENCH_ENABLE_TODO_TOOLS` | 1 | `CLAUDE_CODE_ENABLE_TODO_TOOLS` |
+| `BENCH_SIMPLE_SYSTEM_PROMPT` | unset | `CLAUDE_CODE_SIMPLE_SYSTEM_PROMPT` |
+
+Also forced on: no unknown-model window enforcement, no marketplace
+auto-install, no away summaries/prompt suggestions/cron, no auto-memory, no CFC
+prompt. Subagents are limited to one concurrent and eight per session by
+default; raise the limits only if a model needs them. Example per-model
+settings (from the wasm2llvm runs):
+
+```bash
+# DeepSeek 1M-context model
+BENCH_MODEL='deepseek-flash[1m]' BENCH_EFFORT=high \
+  BENCH_COMPACT_WINDOW=786432 BENCH_MAX_CONTEXT=1000000 \
+  sandbox/run_agent.sh run01
+# GPT-6-class model
+BENCH_MODEL=gpt-6-luna BENCH_EFFORT=max \
+  BENCH_COMPACT_WINDOW=300000 BENCH_MAX_CONTEXT=1000000 \
+  sandbox/run_agent.sh run01
+```
+
+Leave `BENCH_EFFORT`/`BENCH_COMPACT_WINDOW` unset for models whose defaults are
+unknown; the budget and subagent limits still apply.
+
 ## Grading
 
 ```bash
@@ -156,7 +198,7 @@ The benchmark is implemented and calibrated end to end:
   `verification/tests/golden/`);
 - the ABI stub scores 0.000; the llama.cpp calibration shim scores 0.9951
   (Vulkan, grading container) and 0.9952 (CPU);
-- the Vulkan shim measures 1.003× the reference geomean, and its peak VRAM is
+- the Vulkan shim measures 1.004× the reference geomean (grading path), and its peak VRAM is
   1978.8 MiB against a 2950.6 MiB gate (RSS 1333 MiB vs 4089 MiB);
 - the agent sandbox was validated against a mock Messages API (tool use, GPU
   access, workspace writes, WebFetch denial, credential isolation, no egress),
