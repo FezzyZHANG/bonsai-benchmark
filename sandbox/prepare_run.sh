@@ -1,4 +1,11 @@
 #!/bin/bash
+
+case "${BENCH_AGENT:-claude}" in
+  codex) exec python3 "$(dirname "$0")/prepare_codex.py" "$@" ;;
+  claude) ;;
+  *) echo 'BENCH_AGENT must be claude or codex' >&2; exit 1 ;;
+esac
+
 # Prepare a fresh agent workspace and its Claude Code settings.
 #
 #   sandbox/prepare_run.sh RUN_NAME [RUNS_ROOT]

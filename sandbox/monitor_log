@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Human-readable tail for Claude Code stream-json transcripts.
+"""Human-readable tail for Claude Code stream-json and Codex JSONL transcripts.
 
 Usage:
     monitor_log [--no-follow] [--no-color] PATH
@@ -120,6 +120,37 @@ def render(event, style, state, tool_names, progress):
     typ = event.get("type")
     sub = event.get("subtype")
     prefix = style("time", f"{clock(event.get('timestamp'), state)} ")
+
+    if typ in ("thread.started", "turn.started"):
+        out(prefix + style("system", f"[{typ}] {event.get('thread_id', '')}".rstrip()))
+        return
+    if typ in ("turn.completed", "turn.failed", "error"):
+        role = "result" if typ == "turn.completed" else "error"
+        out(prefix + style(role, f"[{typ}]"))
+        body = event.get("usage") or event.get("error") or event.get("message")
+        if body:
+            out(indent(clip(json.dumps(body, ensure_ascii=False), MAX_TOOL_OUTPUT)))
+        return
+    if typ in ("item.started", "item.updated", "item.completed"):
+        item = event.get("item") or {}
+        kind = item.get("type", "item")
+        if kind == "command_execution":
+            if typ == "item.started":
+                out(prefix + style("tool", "[command] ") + clip(item.get("command", ""), MAX_TOOL_INPUT))
+            elif typ == "item.completed":
+                code = item.get("exit_code")
+                role = "result" if code == 0 else "error"
+                out(prefix + style(role, f"[command exit={code}]"))
+                out(indent(clip(item.get("aggregated_output", ""), MAX_TOOL_OUTPUT)))
+        elif typ == "item.completed":
+            if kind in ("agent_message", "reasoning"):
+                role = "assistant" if kind == "agent_message" else "thinking"
+                out(prefix + style(role, f"[{kind}]"))
+                out(indent(clip(item.get("text", ""), MAX_TEXT, 200)))
+            else:
+                out(prefix + style("tool", f"[{kind}] ") +
+                    clip(json.dumps(item, ensure_ascii=False), MAX_TOOL_OUTPUT))
+        return
 
     if typ == "assistant":
         msg = event.get("message") or {}
@@ -355,13 +386,15 @@ def follow(path, no_follow, style):
 
 def main():
     ap = argparse.ArgumentParser(
-        description="Print a Claude Code stream-json transcript readably and "
+        description="Print a Claude Code or Codex JSONL transcript readably and "
                     "follow it like tail -f.")
     ap.add_argument("path")
     ap.add_argument("--no-follow", action="store_true",
                     help="print the existing transcript and exit")
     ap.add_argument("--color", default="auto", choices=["never", "auto", "always"],
                     help="ANSI color")
+    ap.add_argument("--no-color", dest="color", action="store_const", const="never",
+                    help="alias for --color never")
     args = ap.parse_args()
 
     style = Style(args.color == "always" or sys.stdout.isatty() and not args.color == "never"

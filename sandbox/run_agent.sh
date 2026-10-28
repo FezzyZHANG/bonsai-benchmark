@@ -9,6 +9,12 @@
 # forwards only the Messages API paths.
 set -euo pipefail
 
+case "${BENCH_AGENT:-claude}" in
+  codex) exec bash "$(dirname "$0")/run_codex.sh" "$@" ;;
+  claude) ;;
+  *) echo 'BENCH_AGENT must be claude or codex' >&2; exit 1 ;;
+esac
+
 BENCH="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
 NAME="${1:?usage: run_agent.sh RUN_NAME [RUNS_ROOT]}"
 ROOT="${2:-/mnt/workspace/bonsai-runs}"

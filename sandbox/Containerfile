@@ -51,6 +51,12 @@ RUN npm install -g @anthropic-ai/claude-code@2.1.310 \
     && npm cache clean --force \
     && claude --version
 
+# Codex CLI: pinned for reproducible runner behavior and JSONL event schemas.
+ARG CODEX_VERSION=0.162.1
+RUN npm install -g @openai/codex@${CODEX_VERSION} \
+    && npm cache clean --force \
+    && codex --version
+
 # Remaining-time helper for the benchmark wall-clock budget.
 COPY sandbox/time-left.sh /usr/local/bin/time-left
 RUN chmod 0755 /usr/local/bin/time-left

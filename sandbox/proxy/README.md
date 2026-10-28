@@ -34,3 +34,17 @@ The launcher derives Deno's `--allow-net` from `HOST:PORT` and the upstream
 host/port, so the proxy itself cannot be used to reach arbitrary hosts.
 
 Logs are JSONL on stdout, captured to `RUNS_ROOT/RUN_NAME.proxy.jsonl`.
+
+## Codex / Responses API
+
+`openai-proxy.sh` reuses the same forwarding, redaction, streaming and budget
+implementation. It reads `OPENAI_API_KEY` and `OPENAI_BASE_URL` (default
+`https://api.openai.com/v1`), fixes auth to Bearer, and allows only
+`POST /responses` and `POST /responses/compact`. The client base URL is
+`http://<proxy-ip>:8787`, with no `/v1`; the full upstream prefix already
+contains that component. The agent never receives the upstream credential.
+
+`python3 -m unittest discover -s sandbox/tests -v` tests Responses routing,
+streaming, auth injection, log redaction, forbidden paths/methods and the
+request cap. `python3 sandbox/smoke_codex.py` additionally exercises the real
+Codex CLI with a local mock API and no billable calls.

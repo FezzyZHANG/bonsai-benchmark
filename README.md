@@ -1,6 +1,6 @@
 # bonsai-vk benchmark (operator documentation)
 
-Benchmark task for AI coding agents running in Claude Code: implement a Vulkan
+Benchmark task for AI coding agents running in Claude Code or Codex: implement a Vulkan
 inference engine for PrismML's `Ternary-Bonsai-2-4B-PTQ1_0.gguf` in **Zig
 0.17.0** with **Vulkan SDK 1.4.363.0**, targeting Vulkan 1.4 and the
 compute-relevant Vulkan Roadmap 2026 feature set.
@@ -62,6 +62,32 @@ Unless skipped, it also builds:
 
 ## Running an agent
 
+Claude Code remains the default. To use **Codex CLI 0.162.1**, prepare a fresh
+workspace with `BENCH_AGENT=codex` and select the same runner when starting it:
+
+```bash
+BENCH_AGENT=codex sandbox/prepare_run.sh codex01 /mnt/workspace/bonsai-runs
+# Set OPENAI_API_KEY in the operator shell; do not put it in the run workspace.
+export OPENAI_BASE_URL=https://api.openai.com/v1
+export BENCH_MODEL=your-model-id
+BENCH_AGENT=codex sandbox/run_agent.sh codex01 /mnt/workspace/bonsai-runs
+```
+
+The endpoint must support the **Responses API**; an Anthropic Messages or
+Chat Completions endpoint alone is insufficient. The real key stays in the
+proxy container. Codex receives a dummy key and an isolated configuration,
+with web search, apps, plugins, hooks, memory and subagents disabled. The same
+offline Podman network, read-only data mounts, GPU access, deadline and grader
+apply. `monitor_log` accepts both agents' JSONL formats.
+
+Codex supports `BENCH_MODEL`, `BENCH_EFFORT`, `BENCH_COMPACT_WINDOW` and
+`BENCH_MAX_CONTEXT`. `RUN_TIMEOUT` and `MAX_REQUESTS` bound the run. Unsupported
+Claude-only output/turn/subagent settings are rejected rather than silently
+ignored. See [Codex setup and verification](sandbox/CODEX.md), including the
+local mock smoke test and the official GPU requirements.
+
+The original Claude Code invocation is unchanged:
+
 ```bash
 sandbox/prepare_run.sh run01
 ANTHROPIC_BASE_URL=https://... ANTHROPIC_AUTH_TOKEN=... sandbox/run_agent.sh run01
@@ -117,7 +143,7 @@ container). `RUN_TIMEOUT` bounds the run (default 2 h).
 
 ### Model and cost tuning
 
-`run_agent.sh` sets Claude Code's cost and model knobs from `BENCH_*` variables
+With `BENCH_AGENT=claude` (the default), `run_agent.sh` sets Claude Code's cost and model knobs from `BENCH_*` variables
 (same names as in the wasm2llvm runs). The effective configuration is written
 to `RUN_NAME.tuning`.
 
