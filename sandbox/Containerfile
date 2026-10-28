@@ -51,5 +51,9 @@ RUN npm install -g @anthropic-ai/claude-code@2.1.310 \
     && npm cache clean --force \
     && claude --version
 
+# Remaining-time helper for the benchmark wall-clock budget.
+COPY sandbox/time-left.sh /usr/local/bin/time-left
+RUN chmod 0755 /usr/local/bin/time-left
+
 WORKDIR /workspace
 CMD ["/bin/bash"]

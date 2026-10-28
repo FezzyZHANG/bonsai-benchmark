@@ -89,6 +89,12 @@ container). `RUN_TIMEOUT` bounds the run (default 4 h).
   RADV. Use the host's `render` group/ACL as in the investigation.
 - The transcript is `RUNS_ROOT/RUN_NAME.transcript.jsonl`; proxy JSONL is
   `RUNS_ROOT/RUN_NAME/proxy.jsonl`.
+- Each run has a wall-clock budget (`RUN_TIMEOUT`, default 4 h). The deadline
+  is exported as `BENCH_DEADLINE_EPOCH` and `time-left` prints the remainder;
+  the runner records start/end/timeout in `RUN_NAME.meta.json`. Only the
+  workspace at the deadline is graded, and the docs tell the agent to save
+  continuously. The CPU and Vulkan reference binaries are both available;
+  expected speeds are documented in `TASK.md`.
 - `sandbox/smoke_test.sh [NAME]` validates the whole sandbox against a local
   mock Messages API (`sandbox/mock_anthropic.py`): tool use, GPU access,
   workspace writes and the WebFetch denial, without spending real API calls or

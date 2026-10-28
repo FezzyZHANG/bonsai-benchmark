@@ -14,5 +14,9 @@ model and tokenizer formats. The specifications are in `docs/`.
 and `ref/PROTOCOL.md` documents a reference runner. Use them as the correctness
 oracle. `data/*.safetensors` contains the dequantized weights for development.
 
+You have a wall-clock budget: run `time-left` to see the remaining time and
+read the time-budget section of `TASK.md`. Only the workspace at the deadline is
+graded, so save your work continuously.
+
 Work autonomously until the engine is complete. Leave `NOTES.md` describing your
 design, known limitations and test results.

@@ -46,6 +46,8 @@ Notes:
   Use `cpu` for tokenizer, metadata and short spot checks; use `vulkan` for
   iteration. The grader compares against precomputed CPU golden values, so you
   do not need to run CPU inference to be graded.
+- `ref/bin/bonsai-ref-cpu` is the same runner built without the Vulkan backend;
+  it accepts only `cpu` contexts and is useful for pure-CPU checks.
 
 `llama-cli`, `llama-debug` and `llama-perplexity` are also provided for
 ad-hoc reference runs; `llama-cli -ngl 0` uses the CPU backend and

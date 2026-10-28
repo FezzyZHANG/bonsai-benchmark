@@ -45,11 +45,28 @@ Everything is offline. Available tools and data:
   `data/Ternary-Bonsai-2-4B-PTQ1_0-f16.safetensors` (dequantized weights),
   and `data/samples/` (sample prompts/corpus). `TOKENIZER-VECTORS.json` gives
   reference token ids for visible strings.
-- **Reference**: `ref/bin/{llama-cli,llama-debug,llama-perplexity,bonsai-ref}`
-  are stripped llama.cpp builds (CPU and Vulkan backends, `-ngl 0` / `-ngl 99`).
-  `ref/PROTOCOL.md` describes `bonsai-ref`.
+- **Reference**: `ref/bin/{llama-cli,llama-debug,llama-perplexity,bonsai-ref,bonsai-ref-cpu}`
+  are stripped llama.cpp builds. `-ngl 0` / `-ngl 99` or `ctx ... cpu|vulkan`
+  select the backend; `bonsai-ref-cpu` has no Vulkan backend. The Vulkan backend
+  runs at roughly 130–180 token/s generation and 2,600–3,500 token/s prefill on
+  this GPU; the CPU backend is memory-bandwidth-bound at roughly 10–35 token/s,
+  so reserve it for tokenizer checks and short spot checks. `ref/PROTOCOL.md`
+  describes the line protocol.
 - **Docs**: `docs/` contains the Vulkan 1.4 spec, Roadmap 2026 appendix and
   profile, SPIR-V/GLSL specs, GGUF spec, Vulkan Profiles overview, and Zig docs.
+
+## Time budget
+
+The session is terminated at a fixed wall-clock deadline. `BENCH_DEADLINE_EPOCH`
+holds the deadline as Unix time, and `time-left` prints the remaining time. The
+default budget is 4 hours; trust the environment variable if it differs.
+
+Only files in this workspace at the deadline are graded. The conversation is
+not saved for grading, so write code, run tests and update `NOTES.md`
+continuously rather than leaving everything to the end. Plan the budget: the
+Vulkan reference is fast enough for frequent checks, the CPU reference is slow,
+and hidden grading uses precomputed CPU values, so CPU inference is never
+required.
 
 ## Target and constraints
 

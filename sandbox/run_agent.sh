@@ -28,7 +28,8 @@ PROXY_IP="${PROXY_IP:-10.89.0.2}"
 AGENT_IP="${AGENT_IP:-10.89.0.3}"
 PNAME="bonsai-proxy-$NAME"
 ANAME="bonsai-agent-$NAME"
-RUN_TIMEOUT="${RUN_TIMEOUT:-14400}"
+RUN_TIMEOUT="${RUN_TIMEOUT:-14400}"   # wall-clock budget, seconds (default 4 h)
+DEADLINE_EPOCH=$(( $(date +%s) + RUN_TIMEOUT ))
 
 # Optional model pin for benchmarking several models through the same proxy.
 MODEL_ENV=()
@@ -82,10 +83,12 @@ if ! podman logs "$PNAME" 2>&1 | grep -q "listening on"; then
 fi
 
 set +e
-timeout "$RUN_TIMEOUT" podman run --rm --name "$ANAME" \
+START_EPOCH=$(date +%s)
+timeout --signal=TERM --kill-after=60 "$RUN_TIMEOUT" podman run --rm --name "$ANAME" \
   --device /dev/dri --group-add keep-groups --security-opt label=disable \
   --network "$INT_NET:ip=$AGENT_IP" \
   --shm-size=4g --tmpfs /tmp:rw,size=8g \
+  -e BENCH_DEADLINE_EPOCH="$DEADLINE_EPOCH" \
   -v "$RUN:/workspace" \
   -v "$BENCH/deps/docs:/workspace/docs:ro" \
   -v "$BENCH/deps/data:/workspace/data:ro" \
@@ -105,5 +108,11 @@ timeout "$RUN_TIMEOUT" podman run --rm --name "$ANAME" \
   >"$ROOT/$NAME.transcript.jsonl" 2>"$ROOT/$NAME.stderr.log"
 rc=$?
 set -e
-echo "agent exit: $rc"
+END_EPOCH=$(date +%s)
+timed_out=false
+if [ "$rc" -eq 124 ]; then timed_out=true; fi
+printf '{"start_epoch":%d,"end_epoch":%d,"budget_s":%d,"elapsed_s":%d,"exit":%d,"timed_out":%s,"deadline_epoch":%d}\n' \
+  "$START_EPOCH" "$END_EPOCH" "$RUN_TIMEOUT" "$((END_EPOCH - START_EPOCH))" \
+  "$rc" "$timed_out" "$DEADLINE_EPOCH" > "$ROOT/$NAME.meta.json"
+echo "agent exit: $rc (elapsed $((END_EPOCH - START_EPOCH))s of $RUN_TIMEOUT s)"
 exit "$rc"

@@ -106,6 +106,10 @@ peak/RSS are measured by the verifier on the same GPU.
 
 ## 6. Deliverable notes
 
+The session is terminated at the deadline in `BENCH_DEADLINE_EPOCH`; only
+workspace files present at that moment are graded. Save code and notes
+continuously.
+
 Leave `NOTES.md` with:
 
 - the engine design and which Vulkan features it uses,
