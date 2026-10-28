@@ -38,7 +38,7 @@ fi
 """
 
 SMOKE_PY = """#!/bin/bash
-python3 -c "import gguf, numpy, safetensors; print('py-ok')"
+python3 -c "import gguf, numpy, safetensors, yaml; from safetensors import safe_open; f=safe_open('/workspace/data/Ternary-Bonsai-2-4B-PTQ1_0-f16.safetensors', framework='numpy'); assert len(f.keys()) == 426 and not f.metadata(); print('py-ok')"
 """
 
 BUILD_ZIG = """const std = @import("std");

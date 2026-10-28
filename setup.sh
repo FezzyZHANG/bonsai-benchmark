@@ -97,6 +97,16 @@ if [ ! -x deps/python/bin/python ]; then
     uv pip install --python deps/python/bin/python numpy safetensors pyyaml
   fi
 fi
+# Existing venvs can predate a dependency; keep setup.sh idempotent.
+if ! deps/python/bin/python -c "import numpy, safetensors, yaml" >/dev/null 2>&1; then
+  log "install Python data dependencies"
+  if [ -x deps/python/bin/pip ]; then
+    deps/python/bin/pip install --no-cache-dir numpy safetensors pyyaml
+  else
+    command -v uv >/dev/null || { echo "uv is missing and deps/python has no pip" >&2; exit 1; }
+    uv pip install --python deps/python/bin/python numpy safetensors pyyaml
+  fi
+fi
 
 # --- data --------------------------------------------------------------------
 if [ "$SKIP_DATA" = 0 ]; then
@@ -126,13 +136,13 @@ if [ "$SKIP_DATA" = 0 ]; then
         --manifest deps/data/Ternary-Bonsai-2-4B-PTQ1_0-f16.manifest.json
     fi
   fi
+  # The safetensors header is visible to the agent; do not ship the
+  # quantization/layout notes written by older generators or the export.
+  deps/python/bin/python -I verification/tools/strip_safetensors_metadata.py "$ST"
   mkdir -p deps/data/samples
-  if [ -f "$INV/data/agreement_corpus.txt" ]; then
-    cp -f "$INV/data/agreement_corpus.txt" deps/data/samples/corpus.txt
-    cp -f "$INV/data/p2k.txt" deps/data/samples/short.txt 2>/dev/null || true
-  fi
-  if [ ! -s deps/data/samples/corpus.txt ]; then
-    deps/python/bin/python -I - <<'PY'
+  # Keep the visible samples neutral: the investigation corpus and p2k text are
+  # llama.cpp/Prism READMEs that name the architecture and quantization format.
+  deps/python/bin/python -I - <<'PY'
 from pathlib import Path
 out = []
 for p in ["deps/docs/gguf.md", "deps/docs/Vulkan-Profiles-OVERVIEW.md"]:
@@ -141,7 +151,6 @@ for p in ["deps/docs/gguf.md", "deps/docs/Vulkan-Profiles-OVERVIEW.md"]:
 Path("deps/data/samples/corpus.txt").write_text("\n\n".join(out) or "sample corpus\n")
 Path("deps/data/samples/short.txt").write_text("The quick brown fox jumps over the lazy dog.\n")
 PY
-  fi
 fi
 
 # --- reference binaries ------------------------------------------------------

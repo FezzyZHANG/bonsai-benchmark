@@ -30,7 +30,7 @@ not run CPU inference. The correctness score is a weighted mean:
 | suite | weight | metric |
 |---|---:|---|
 | tokenizer | 0.10 | fraction of hidden strings whose token ids match exactly |
-| dequant | 0.15 | fraction of sampled tensors whose f32 values match the reference exactly (PTQ1_0 widened from f16; F32 copied) and whose `tensor_info` type/rank/shape match the GGUF |
+| dequant | 0.15 | fraction of sampled tensors whose f32 values match the reference exactly (PTQ1_0 dequantized values widened to f32; F32 copied) and whose `tensor_info` type/rank/shape match the GGUF |
 | logits | 0.30 | per prompt at n_ctx 512/2048/4096/8192: top-1 match, mean KL, cosine |
 | positions | 0.15 | hidden corpus at n_ctx 512/2048: top-1 agreement and mean KL across positions |
 | greedy | 0.30 | teacher-forced agreement over 64 steps after 64/2048/8192-token prompts (n_ctx 1024/4096/16384), plus a `generate` smoke test |
@@ -84,11 +84,10 @@ sampling during decode.
   demonstrate that the model is resident on the GPU rather than computed on
   the CPU.
 
-The decisive anti-pre-dequant check is the model size: a full F16 copy of the
-weights (about 8.4 GiB) or an F32 copy (about 16.8 GiB) cannot fit under the
-gate, while the packed weights are about 0.9 GiB. Failing the VRAM gate sets
-the performance score to zero; correctness is still reported. The reference
-peak/RSS are measured by the verifier on the same GPU.
+The gate is sized so that a pre-dequantized copy of the weights cannot pass;
+the packed model must stay resident. Failing the VRAM gate sets the performance
+score to zero; correctness is still reported. The reference peak/RSS are
+measured by the verifier on the same GPU.
 
 ## 5. Anti-cheat and hygiene
 

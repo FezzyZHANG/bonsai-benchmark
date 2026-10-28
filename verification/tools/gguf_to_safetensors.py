@@ -87,20 +87,12 @@ def main():
                   f"shape={arr.shape} {time.time()-st:.2f}s "
                   f"total={time.time()-t0:.1f}s", flush=True)
 
-    metadata = {
-        "format": "pt",
-        "source_gguf": args.gguf.split("/")[-1],
-        "source_quant": "PTQ1_0 (ggml type 143, group-128 ternary, 1.75 bpw)",
-        "dequant_note": "PTQ1_0 values are trit * fp16 group scale; F16 is bit-exact. "
-                        "F32 GGUF tensors (norms/biases/SSM scalars) are preserved as F32.",
-        "tensor_names": "llama.cpp/GGUF names",
-        "shape_order": "PyTorch row-major; GGUF ne[0] (contiguous/inner) appears last",
-    }
-
     print(f"saving {len(tensors)} tensors, {total_elems} elements "
           f"(F16 {f16_elems}, F32 {f32_elems}) to {args.out}", flush=True)
     ts = time.time()
-    save_file(tensors, args.out, metadata=metadata)
+    # No __metadata__: this file is mounted into agent runs, and the safetensors
+    # header must not reveal the quantization scheme or tensor layout hints.
+    save_file(tensors, args.out)
     print(f"saved in {time.time()-ts:.1f}s; total {time.time()-t0:.1f}s", flush=True)
 
     if args.manifest:

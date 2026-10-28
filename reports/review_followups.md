@@ -105,10 +105,9 @@ The remaining items can still affect a run in these ways:
   submission if that is the intent.
 ## D. Prompting / documentation nits
 
-- [ ] **`MODEL.md` L2-norm form.** The doc says
-  `q / sqrt(sum(q^2) + eps)`; ggml uses `q / max(sqrt(sum(q^2)), eps)`. The
-  difference is negligible for these norms and far inside tolerance, but align
-  the doc with the oracle.
+- [x] **`MODEL.md` L2-norm form.** Moot: the architecture description
+  (including the GDN L2-norm formula) was removed when `MODEL.md` was reduced
+  to a reverse-engineering pointer.
 - [ ] **README "pin the model through the proxy".** The proxy does not enforce
   `BENCH_MODEL`; `run_agent.sh` only exports Claude Code's model env. Say
   "sets Claude Code's model" unless proxy enforcement is added.
@@ -119,6 +118,39 @@ The remaining items can still affect a run in these ways:
 - [ ] **Minor: `ACCEPTANCE.md` §3 "performance is only scored when the
   correctness suites pass"** and §5 "linked libraries are checked" do not match
   the implementation (covered above).
+
+### Remaining hint sources (not removed)
+
+- **GGUF `prism.hadamard.*` metadata.** The GGUF itself names
+  `normalized-sylvester-walsh-hadamard`, gives the block size, axis, sign mode,
+  sign widths/values, the folded weight list, `inverse_weight_names`,
+  `tied_output` and `gdn_v_grouped`. `agent/MODEL.md` no longer expands these,
+  but the keys are visible. The reference loader requires them
+  (`llama-model.cpp:1207-1351`), so removing them would break the oracle unless
+  the fork is patched and the golden regenerated.
+- **GGUF tensor names and shapes.** `attn_qkv`, `attn_gate`, `ssm_conv1d`,
+  `ssm_a`, `ssm_alpha`, `ssm_beta`, `ssm_norm`, `ssm_out`, etc. reveal the
+  hybrid architecture and the full/full-attention schedule without renaming
+  tensors (which would also break the reference).
+- **Reference binary strings.** `strings deps/ref/bin/bonsai-ref` still shows
+  `GATED_DELTA_NET`, `gated_delta_net(q, k, v, g, beta, s)`,
+  `blk.%d.ssm_*`, `prism.hadamard`, and the fused GDN kernel names. Symbol
+  stripping does not remove string literals. If the oracle is meant to be
+  behavior-only, the binaries need an error/op-string-free build; otherwise
+  `strings` is an easy shortcut. `llama-debug` may leak more.
+- **`gguf-py` constants.** `deps/gguf-py/gguf/constants.py` names `PTQ1_0`
+  and gives its block layout `(128, 2 + 24 + 2)`. Removing those entries (or
+  shipping a reader that reports the type numerically) would make the PTQ1_0
+  decoder more of a reverse-engineering task; the reader would still expose
+  the raw bytes.
+- **`agent/TOKENIZER.md`.** Gives the exact `qwen35` pre-tokenizer regex,
+  `clean_spaces = false`, the byte table and the BPE algorithm. This is the
+  largest remaining hand-holding for a scored suite (10%). It may be
+  intentional (tokenizer is not the novel architecture); trim it to a pointer
+  if the tokenizer should also be reverse-engineered.
+- **Model/file names** contain `Ternary` and `PTQ1_0`, and `general.name` in
+  the GGUF says `Ternary-Bonsai-2-4B`. The quantization family is therefore
+  visible even with all metadata stripped.
 
 ## Fixed in this pass
 
@@ -138,9 +170,24 @@ The remaining items can still affect a run in these ways:
 - [x] `verification/harness/agent_harness.py`: clamp `n_batch` to `n_ctx`
   (`Engine.ctx`), so the `tg @ d0` perf context (257) no longer passes a 512
   hint.
-- [x] `agent/MODEL.md`: the reference uses the activation-side fold; rotating
-  the latent weights once at load is explicitly allowed as an equivalent
-  implementation.
+- [x] `agent/MODEL.md`: reduced to an artifact/oracle pointer. The architecture,
+  layouts, fold, recurrence and numerical formulas are intentionally
+  undocumented so the model must be reverse-engineered.
+- [x] `deps/data/*-f16.safetensors`: stripped the visible `__metadata__`
+  (quantization name, group size, trit/f16 note). `setup.sh` now strips it for
+  linked exports too, and `gguf_to_safetensors.py` no longer writes it.
+- [x] `setup.sh`: dependency install is idempotent (an existing `deps/python`
+  venv missing `pyyaml` is repaired; this was not caught by the agent smoke
+  test because it checks the agent image, which always installs the packages).
+- [x] `sandbox/mock_anthropic.py`: the smoke test's Python step now imports
+  `yaml` and opens the safetensors file, asserting 426 tensors and no
+  `__metadata__`, so a missing data dependency or unstripped header fails the
+  sandbox check.
+- [x] `deps/data/samples/`: the visible corpus/short prompt were the Prism
+  llama.cpp README, which names `GATED_DELTA_NET`, recurrent/delta-net layers,
+  state size 128, head size 256, value heads and PTQ1_0. They are now neutral
+  GGUF/Vulkan documentation; `setup.sh` no longer copies the investigation
+  corpus/p2k text.
 - [x] `verification/verify.py`, `verification/tools/ref_client.py`: catch
   build/harness/golden-generation timeouts and reference-measurement failures;
   give `RefClient` a per-command timeout and clean up a timed-out build/harness

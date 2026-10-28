@@ -53,8 +53,10 @@ int32_t  bonsai_generate_greedy(bonsai_context *ctx,
 - `bonsai_model_open` parses the GGUF at `gguf_path`. It must not open any other
   model/weight file. The path is a normal filesystem path supplied by the
   harness.
-- `bonsai_n_vocab` returns the vocabulary size (248320 for this model).
-- `bonsai_n_ctx_train` returns the model context length (262144).
+- `bonsai_n_vocab` returns the vocabulary size from the GGUF tokenizer
+  metadata.
+- `bonsai_n_ctx_train` returns the model context length from the GGUF
+  `context_length` metadata.
 - Multiple models may be opened, but the tests normally use one.
 - Errors: return a negative code and set a human-readable `bonsai_last_error`.
 
@@ -76,16 +78,16 @@ int32_t  bonsai_generate_greedy(bonsai_context *ctx,
 
 ## Tensor introspection (staged tests)
 
-- `bonsai_tensor_count` returns the number of tensors in the GGUF (426).
+- `bonsai_tensor_count` returns the number of tensors in the GGUF.
 - `bonsai_tensor_info` returns the tensor name (owned by the model), the numeric
-  GGML type id (F32 = 0, PTQ1_0 = 143), the rank (1 or 2 for this model), and
-  `ne[0..3]` in **GGUF order** (`ne[0]` is the contiguous/inner dimension).
+  GGML type id (as reported by `gguf-py`), the rank, and `ne[0..3]` in **GGUF
+  order** (`ne[0]` is the contiguous/inner dimension).
 - `bonsai_tensor_dequant` writes the tensor to `out` as **f32** in PyTorch /
   safetensors row-major order: the GGUF dimensions are reversed, so `ne[0]`
   varies fastest and element `(i1, i0)` is at `i1*ne[0] + i0`.
-- For PTQ1_0 the values must be the exact dequantized fp16 values widened to
-  f32 (0 is exact; no approximation tolerance is applied). For F32 tensors the
-  values are copied bit-exactly.
+- For PTQ1_0 the values must match the reference dequantization bit-exactly
+  (no approximation tolerance is applied). For F32 tensors the values are
+  copied bit-exactly.
 - Returns the element count, or `BONSAI_ERR_CAPACITY` if `capacity` is too
   small.
 
@@ -111,7 +113,8 @@ int32_t  bonsai_generate_greedy(bonsai_context *ctx,
   selects the argmax token of the last-token logits, appends it, and repeats up
   to `n_predict` times.
 - It writes generated token ids to `out_ids` (capacity at least `n_predict`) and
-  returns the count. It stops early at EOS (248046) unless
+  returns the count. It stops early at the model's EOS token (from the GGUF
+  tokenizer metadata) unless
   `BONSAI_GEN_IGNORE_EOS` is set.
 - Determinism is required: same prompt and context size produce the same ids.
 - After the call the context state is unspecified; the harness resets it.

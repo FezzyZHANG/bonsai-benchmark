@@ -21,7 +21,7 @@ is a secondary gate to prevent pre-dequantization.
 | `agent/ABI.md` | yes | C ABI contract |
 | `agent/ACCEPTANCE.md` | yes | acceptance and scoring |
 | `agent/DEVICE.md` | yes | GPU and Roadmap 2026 compute subset |
-| `agent/MODEL.md` | yes | architecture specification |
+| `agent/MODEL.md` | yes | artifact/oracle notes; architecture deliberately undocumented |
 | `agent/TOKENIZER.md` | yes | byte-level BPE / qwen35 specification |
 | `agent/TOKENIZER-VECTORS.json` | yes | visible reference token ids |
 | `agent/examples/` | yes | ABI stub, reference protocol, sample prompts |
@@ -109,8 +109,8 @@ container). `RUN_TIMEOUT` bounds the run (default 2 h).
   mock Messages API (`sandbox/mock_anthropic.py`): individual simple Bash
   commands and the script workaround, GPU access, workspace writes,
   `data/docs/ref` read-only, WebFetch/WebSearch denial, credential isolation,
-  no egress, and the toolchain, without spending real API calls or exposing a
-  credential.
+  no egress, and the toolchain (including the Python data stack and the
+  safetensors file), without spending real API calls or exposing a credential.
 
 ### Model and cost tuning
 

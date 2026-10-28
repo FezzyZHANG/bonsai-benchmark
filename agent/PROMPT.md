@@ -7,8 +7,10 @@ described in `DEVICE.md`.
 
 Expose the C ABI in `ABI.md` as `zig-out/lib/libbonsai.so`. `TASK.md` describes
 the deliverable and constraints; `ACCEPTANCE.md` describes correctness,
-performance and VRAM acceptance. `MODEL.md` and `TOKENIZER.md` describe the
-model and tokenizer formats. The specifications are in `docs/`.
+performance and VRAM acceptance. `MODEL.md` lists the available model
+artifacts and the oracle; the architecture is intentionally not documented.
+`TOKENIZER.md` describes the tokenizer format. The specifications are in
+`docs/`.
 
 `ref/` contains symbol-stripped llama.cpp binaries with CPU and Vulkan backends,
 and `ref/PROTOCOL.md` documents a reference runner. Use them as the correctness
