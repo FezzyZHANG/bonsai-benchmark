@@ -109,9 +109,10 @@ python3 verification/verify.py /mnt/workspace/bonsai-runs/run01 --out .../run01-
 The verifier builds the submission offline in a clean container, then runs it
 in a GPU container with hidden tests. It reports:
 
-1. **Correctness (primary)** — tokenizer ids, dequantized tensors, last-token
-   logits, per-position agreement, greedy token ids, all against the CPU
-   llama.cpp golden. Weighted score; acceptance ≥ 0.90.
+1. **Correctness (primary)** — tokenizer ids, dequantized tensors and their
+   metadata, last-token logits, per-position agreement, teacher-forced greedy
+   agreement, all against the CPU llama.cpp golden. Weighted score;
+   acceptance ≥ 0.90.
 2. **Performance** — pp (512/2048/4096/8192) and tg (depths 0/512/2048/4096/8192)
    vs the stripped llama.cpp Vulkan reference, geomean speedup.
 3. **VRAM (secondary gate)** — peak process VRAM via `/proc/<pid>/fdinfo`
@@ -124,17 +125,17 @@ in a GPU container with hidden tests. It reports:
 Use `--no-container` for host-side debugging and `--library PATH` to grade a
 prebuilt library without rebuilding.
 
-See `agent/ACCEPTANCE.md` for the exact metrics and provisional thresholds.
+See `agent/ACCEPTANCE.md` for the exact metrics and thresholds.
 
 ## Calibration
 
 `verification/tools/refshim/` implements the ABI on top of llama.cpp, built with
 PIC static libs into `verification/bin/libbonsai_ref.so` (hidden; never under
 `deps/`, which the agent can see). `BONSAI_SHIM_BACKEND=cpu|vulkan` selects the
-backend. It is used to calibrate the harness: the shim should score ~1.0
-correctness on CPU (`vulkan` scores like the CPU-vs-Vulkan agreement study),
-~1.0× performance on Vulkan, and reference VRAM; the ABI stub scores 0.
-Thresholds are adjusted after calibration and pilot runs.
+backend. It is used to calibrate the harness: the shim scores ~1.0 correctness
+on CPU (`vulkan` scores like the CPU-vs-Vulkan agreement study), ~1.0×
+performance on Vulkan, and reference VRAM; the ABI stub scores 0. The gate was
+set from these runs; see `reports/calibration.md`.
 
 ## Operator-only solution outline
 
@@ -151,13 +152,15 @@ design the tests and calibration:
 
 The benchmark is implemented and calibrated end to end:
 
-- golden data generated with the CPU-only oracle (hidden, `verification/tests/golden/`);
-- ABI stub scores 0.000, the llama.cpp calibration shim scores 0.995 on both
-  Vulkan (host and grading container) and CPU;
-- the Vulkan shim measures ~1.0× the reference performance, and its peak VRAM
-  is 1968 MiB against a 2950 MiB gate;
+- golden data generated with the CPU-only oracle on a hidden corpus (hidden,
+  `verification/tests/golden/`);
+- the ABI stub scores 0.000; the llama.cpp calibration shim scores 0.9951
+  (Vulkan, grading container) and 0.9952 (CPU);
+- the Vulkan shim measures 1.003× the reference geomean, and its peak VRAM is
+  1978.8 MiB against a 2950.6 MiB gate (RSS 1333 MiB vs 4089 MiB);
 - the agent sandbox was validated against a mock Messages API (tool use, GPU
-  access, credential isolation, no egress).
+  access, workspace writes, WebFetch denial, credential isolation, no egress),
+  with a documented 2-hour wall-clock budget.
 
 See `reports/calibration.md` for the numbers and `reports/roadmap2026_support.md`
 for the Roadmap 2026 device check.
