@@ -179,6 +179,13 @@ in a GPU container with hidden tests. It reports:
 Use `--no-container` for host-side debugging and `--library PATH` to grade a
 prebuilt library without rebuilding.
 
+If the correctness suites take longer than the pre-registered 15-minute
+threshold, the verifier skips the full 5-rep performance run (which would risk
+the 2 h harness timeout) and runs a short illustrative subset instead: pp
+512/2048/4096 and tg depths 0/512/2048, one rep, 32 generated tokens per tg
+case. The report labels those numbers as illustrative. `--perf-short` forces
+the subset; `--perf-threshold SECONDS` changes the cutoff.
+
 See `agent/ACCEPTANCE.md` for the exact metrics and thresholds.
 
 ## Calibration

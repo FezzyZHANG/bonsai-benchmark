@@ -17,6 +17,20 @@ OK = 0
 IGNORE_EOS = 1
 BOS = 248044
 
+# Pre-registered: the full 5-rep perf run evaluates ~5.5x the token work of the
+# correctness suites. If correctness exceeds this wall time, the full perf would
+# risk the verifier's 2 h harness timeout, so the illustrative subset is used.
+DEFAULT_PERF_THRESHOLD_S = 15 * 60
+
+WEIGHTS = {"tokenizer": 0.10, "dequant": 0.15, "logits": 0.30,
+           "positions": 0.15, "greedy": 0.30}
+
+
+def subtotal(scores):
+    """Weighted sum over finished suites; missing suites count as 0."""
+    finished = [k for k in WEIGHTS if k in scores]
+    return sum(WEIGHTS[k] * scores[k] for k in finished), finished
+
 
 # ---------------------------------------------------------------------------
 # ABI wrapper
@@ -404,7 +418,8 @@ def suite_greedy(eng, golden):
     return score, {"matched": same, "total": total, "cases": details}
 
 
-def run_perf(eng, corpus_tokens, reps=5):
+def run_perf(eng, corpus_tokens, reps=5, pp_sizes=(512, 2048, 4096, 8192),
+             tg_depths=(0, 512, 2048, 4096, 8192), tg_tokens=128):
     def prompt_of(n):
         if n == 0:
             return []
@@ -412,7 +427,7 @@ def run_perf(eng, corpus_tokens, reps=5):
         return (corpus_tokens * reps_)[:n]
 
     pp = {}
-    for n in [512, 2048, 4096, 8192]:
+    for n in pp_sizes:
         toks = prompt_of(n)
         times = []
         for _ in range(reps):
@@ -426,18 +441,18 @@ def run_perf(eng, corpus_tokens, reps=5):
         med = sorted(times)[len(times) // 2]
         pp[n] = n / med
     tg = {}
-    for depth in [0, 512, 2048, 4096, 8192]:
+    for depth in tg_depths:
         toks = prompt_of(depth) if depth > 0 else [BOS]
         times = []
         for _ in range(reps):
             ctx = eng.ctx(max(depth, 1) + 256)
             eng.eval(ctx, toks, want_logits=False)
             t0 = time.perf_counter()
-            eng.generate(ctx, [], 128, True)
+            eng.generate(ctx, [], tg_tokens, True)
             times.append(time.perf_counter() - t0)
             eng.free_ctx(ctx)
         med = sorted(times)[len(times) // 2]
-        tg[depth] = 128 / med
+        tg[depth] = tg_tokens / med
     return {"pp": {str(k): v for k, v in pp.items()}, "tg": {str(k): v for k, v in tg.items()}}
 
 
@@ -448,6 +463,10 @@ def main():
     ap.add_argument("--golden", required=True)
     ap.add_argument("--out", required=True)
     ap.add_argument("--skip-perf", action="store_true")
+    ap.add_argument("--perf-short", action="store_true",
+                    help="force the short illustrative perf subset")
+    ap.add_argument("--perf-threshold", type=float, default=DEFAULT_PERF_THRESHOLD_S,
+                    help="correctness wall seconds above which perf is illustrative")
     args = ap.parse_args()
 
     golden_dir = os.path.dirname(os.path.abspath(args.golden))
@@ -458,6 +477,12 @@ def main():
     t0 = time.perf_counter()
     result = {"abi_version": None, "n_vocab": None, "n_ctx_train": None,
               "tensor_count": None, "model_load_s": None}
+
+    def write_result():
+        tmp = args.out + ".tmp"
+        with open(tmp, "w") as f:
+            json.dump(result, f, indent=1)
+        os.replace(tmp, args.out)
 
     def finish():
         mon.stop()
@@ -480,8 +505,7 @@ def main():
             c["accepted"] = False
             result["correctness"] = c
             print(msg, flush=True)
-        with open(args.out, "w") as f:
-            json.dump(result, f, indent=1)
+        write_result()
         print(json.dumps({k: result.get(k) for k in
                           ("correctness", "vram_peak_bytes", "host_peak_rss_bytes")},
                          indent=1))
@@ -498,12 +522,18 @@ def main():
         # A library that cannot even load/open the model scores zero; report it
         # instead of aborting the verifier.
         result["correctness"] = {"score": 0.0, "suites": {},
-                                 "details": {"error": repr(e)}, "accepted": False}
+                                 "details": {"error": repr(e)}, "accepted": False,
+                                 "partial": True, "finished": [],
+                                 "suites_total": len(WEIGHTS)}
         finish()
         return
 
     scores = {}
     details = {}
+    result["correctness"] = {"score": 0.0, "suites": {}, "details": {},
+                             "accepted": False, "partial": True,
+                             "finished": [], "suites_total": len(WEIGHTS)}
+    correctness_t0 = time.perf_counter()
     for name, fn in [
         ("tokenizer", lambda: suite_tokenizer(eng, golden)),
         ("dequant", lambda: suite_dequant(eng, golden, golden_dir)),
@@ -511,23 +541,50 @@ def main():
         ("positions", lambda: suite_positions(eng, golden, golden_dir)),
         ("greedy", lambda: suite_greedy(eng, golden)),
     ]:
+        result["correctness_current"] = name
+        write_result()
         try:
             s, d = fn()
         except Exception as e:  # noqa: BLE001
             s, d = 0.0, {"error": repr(e)}
         scores[name] = s
         details[name] = d
-        print(f"{name}: {s:.4f}", flush=True)
+        sub, finished = subtotal(scores)
+        result["correctness"] = {"score": sub, "suites": dict(scores),
+                                 "details": dict(details), "accepted": False,
+                                 "partial": True, "finished": finished,
+                                 "suites_total": len(WEIGHTS)}
+        print(f"{name}: {s:.4f}  subtotal {sub:.4f} "
+              f"({len(finished)}/{len(WEIGHTS)})", flush=True)
+        write_result()
+    correctness_wall_s = time.perf_counter() - correctness_t0
 
-    weights = {"tokenizer": 0.10, "dequant": 0.15, "logits": 0.30,
-               "positions": 0.15, "greedy": 0.30}
-    correctness = sum(weights[k] * scores[k] for k in weights)
+    correctness = sum(WEIGHTS[k] * scores[k] for k in WEIGHTS)
     result["correctness"] = {"score": correctness, "suites": scores, "details": details,
-                             "accepted": correctness >= 0.90}
+                             "accepted": correctness >= 0.90, "partial": False,
+                             "finished": list(WEIGHTS),
+                             "suites_total": len(WEIGHTS)}
+    result["correctness_current"] = None
+    write_result()
+
+    # Pre-registered decision: run the full 5-rep perf only if the correctness
+    # suites were fast enough that it can fit the verifier's harness timeout.
+    short_perf = args.perf_short or correctness_wall_s > args.perf_threshold
+    result["correctness_wall_s"] = correctness_wall_s
+    result["perf_threshold_s"] = args.perf_threshold
+    result["perf_mode"] = ("skipped" if args.skip_perf else
+                           "illustrative" if short_perf else "full")
+    write_result()
 
     if not args.skip_perf:
         try:
-            result["perf"] = run_perf(eng, golden["corpus_tokens"])
+            if short_perf:
+                result["perf"] = run_perf(
+                    eng, golden["corpus_tokens"], reps=1,
+                    pp_sizes=(512, 2048, 4096),
+                    tg_depths=(0, 512, 2048), tg_tokens=32)
+            else:
+                result["perf"] = run_perf(eng, golden["corpus_tokens"])
         except Exception as e:  # noqa: BLE001
             result["perf_error"] = repr(e)
             print(f"perf failed: {e!r}", flush=True)

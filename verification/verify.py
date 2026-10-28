@@ -123,12 +123,16 @@ def ensure_golden():
         raise SystemExit("golden generation failed")
 
 
-def run_harness(lib, out_json, no_container, skip_perf):
+def run_harness(lib, out_json, no_container, skip_perf, perf_short=False,
+                perf_threshold=900.0):
     if no_container:
         cmd = [PY, os.path.join(HERE, "harness/agent_harness.py"),
                "--library", lib, "--model", MODEL, "--golden", GOLDEN, "--out", out_json]
         if skip_perf:
             cmd.append("--skip-perf")
+        if perf_short:
+            cmd.append("--perf-short")
+        cmd += ["--perf-threshold", str(perf_threshold)]
     else:
         name = f"bonsai-harness-{os.getpid()}"
         cmd = ["podman", "run", "--rm", "--name", name,
@@ -146,6 +150,9 @@ def run_harness(lib, out_json, no_container, skip_perf):
                "--golden", "/golden/manifest.json", "--out", f"/out/{os.path.basename(out_json)}"]
         if skip_perf:
             cmd.append("--skip-perf")
+        if perf_short:
+            cmd.append("--perf-short")
+        cmd += ["--perf-threshold", str(perf_threshold)]
     try:
         r = run(cmd, timeout=7200)
     except subprocess.TimeoutExpired:
@@ -267,8 +274,20 @@ def write_report(rep, out):
     if not rep.get("build_ok"):
         L += ["", "```", rep.get("build_log", ""), "```"]
     else:
-        L.append(f"- **correctness (primary): {c.get('score', 0):.4f}** "
-                 f"({'accepted' if c.get('accepted') else 'below 0.90 gate'})")
+        if c.get("partial"):
+            cur = rep.get("correctness_current")
+            what = ("harness failed" if rep.get("harness_error")
+                    else "not all suites ran")
+            if cur:
+                what += f" during {cur}"
+            L.append(f"- **correctness (partial): {c.get('score', 0):.4f}** "
+                     f"({len(c.get('finished', []))}/{c.get('suites_total', 5)} "
+                     f"suites; {what})")
+            L.append("  - the subtotal treats missing suites as 0; it is a "
+                     "lower bound, not an acceptance score")
+        else:
+            L.append(f"- **correctness (primary): {c.get('score', 0):.4f}** "
+                     f"({'accepted' if c.get('accepted') else 'below 0.90 gate'})")
         for k, v in c.get("suites", {}).items():
             L.append(f"  - {k}: {v:.4f}")
         err = c.get("details", {}).get("error")
@@ -280,10 +299,21 @@ def write_report(rep, out):
         if p.get("error"):
             L.append(f"- performance: FAILED (`{p['error']}`)")
         elif p.get("speedup_geomean") is not None:
-            L.append(f"- performance: geomean speedup vs llama.cpp Vulkan = {p['speedup_geomean']:.3f}")
+            suffix = (" (illustrative subset)"
+                      if rep.get("perf_mode") == "illustrative" else "")
+            L.append(f"- performance: geomean speedup vs llama.cpp Vulkan = "
+                     f"{p['speedup_geomean']:.3f}{suffix}")
             L += ["", "| test | agent t/s | reference t/s | speedup |", "|---|---:|---:|---:|"]
             for k, v in p.get("rows", {}).items():
                 L.append(f"| {k} | {v['agent']:.2f} | {v['ref']:.2f} | {v['speedup']:.3f} |")
+            if rep.get("perf_mode") == "illustrative":
+                cw = rep.get("correctness_wall_s", 0)
+                th = rep.get("perf_threshold_s", 0)
+                reason = ("forced by --perf-short" if cw <= th else
+                          f"correctness took {cw:.0f}s > {th:.0f}s")
+                L.append("")
+                L.append(f"- perf mode: illustrative subset ({reason}); "
+                         f"the full 5-rep pp/tg run was skipped.")
         v = rep.get("vram", {})
         if v:
             L.append(f"- VRAM: agent peak {v.get('agent_peak_bytes', 0)/2**20:.1f} MiB, "
@@ -298,6 +328,10 @@ def main():
     ap.add_argument("submission")
     ap.add_argument("--out", default=None)
     ap.add_argument("--skip-perf", action="store_true")
+    ap.add_argument("--perf-short", action="store_true",
+                    help="force the short illustrative perf subset")
+    ap.add_argument("--perf-threshold", type=float, default=900.0,
+                    help="correctness wall seconds above which perf is illustrative")
     ap.add_argument("--no-container", action="store_true")
     ap.add_argument("--library", help="prebuilt library (debug/calibration)")
     args = ap.parse_args()
@@ -331,17 +365,44 @@ def main():
         return 1
 
     harness_json = os.path.join(work, "agent_result.json")
+    harness_error = None
     try:
-        run_harness(lib, harness_json, args.no_container, args.skip_perf)
+        run_harness(lib, harness_json, args.no_container, args.skip_perf,
+                    args.perf_short, args.perf_threshold)
     except SystemExit as e:
-        rep["harness_error"] = str(e)
+        harness_error = str(e)
+        rep["harness_error"] = harness_error
+
+    # The harness writes agent_result.json after every suite, so a crash still
+    # leaves the scores and subtotal of the finished suites behind.
+    res = None
+    if os.path.exists(harness_json):
+        try:
+            res = json.load(open(harness_json))
+        except Exception as e:  # noqa: BLE001
+            rep["harness_error"] = (rep.get("harness_error") or "") + \
+                f"; cannot read partial result: {e!r}"
+    if res is not None:
+        rep["correctness"] = res.get("correctness") or {}
+        rep["correctness_current"] = res.get("correctness_current")
+        rep["perf_mode"] = res.get("perf_mode")
+        rep["correctness_wall_s"] = res.get("correctness_wall_s")
+        rep["perf_threshold_s"] = res.get("perf_threshold_s")
+        rep["agent_vram_peak_bytes"] = res.get("vram_peak_bytes")
+        rep["agent_host_rss_bytes"] = res.get("host_peak_rss_bytes")
+        rep["child_processes"] = res.get("child_processes")
+    if harness_error is not None:
         write_report(rep, out)
         return 1
-    res = json.load(open(harness_json))
-    rep["correctness"] = res["correctness"]
-    rep["agent_vram_peak_bytes"] = res.get("vram_peak_bytes")
-    rep["agent_host_rss_bytes"] = res.get("host_peak_rss_bytes")
-    rep["child_processes"] = res.get("child_processes")
+    if res is not None and (res.get("correctness") or {}).get("partial"):
+        rep.setdefault("harness_error",
+                       "harness stopped before all correctness suites completed")
+        write_report(rep, out)
+        return 1
+    if res is None:
+        rep.setdefault("harness_error", "harness produced no result")
+        write_report(rep, out)
+        return 1
 
     if not args.skip_perf and "perf" not in res:
         rep["perf"] = {"rows": {}, "speedup_geomean": 0.0,
