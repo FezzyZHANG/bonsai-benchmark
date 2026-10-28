@@ -79,8 +79,11 @@ The merges are the usual `"left right"` strings, e.g. `Ġ Ġ` or `i n`. There ar
 - Tokens whose type marks them as control/user-defined/special are matched
   **atomically** in the input text before BPE (e.g. `<|im_start|>`); they are
   emitted as their exact token ids.
-- `add_bos_token` is false; the ABI's `add_bos` argument can prepend BOS id
-  248044 when nonzero.
+- `add_bos_token` is false in the GGUF. The reference passes
+  `add_special = (add_bos != 0)` to llama.cpp, which honors this metadata, so
+  `add_bos` does **not** prepend BOS for this model; `ids_add_bos` in
+  `TOKENIZER-VECTORS.json` is therefore identical to `ids`. The harness uses
+  `add_bos = 0`.
 - EOS is 248046; padding is 248044.
 - The ABI does not apply the chat template. The harness tokenizes raw text and
   compares token ids with the reference tokenizer.
@@ -89,7 +92,8 @@ The merges are the usual `"left right"` strings, e.g. `Ġ Ġ` or `i n`. There ar
 
 `ref/bin/bonsai-ref` and `llama-cli` use the same tokenizer; use them to obtain
 reference ids for arbitrary strings. `TOKENIZER-VECTORS.json` in this directory
-lists reference ids (with and without BOS) for 15 visible strings. `data/samples/`
+lists reference ids for 15 visible strings (`ids_add_bos` is shown for
+completeness and is identical to `ids` for this model). `data/samples/`
 contains a few visible sample texts; hidden tests use different strings,
 including Unicode, combining marks, code, whitespace and special tokens.
 

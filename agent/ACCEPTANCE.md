@@ -17,6 +17,9 @@ separately.
 - All model computation uses Vulkan 1.4 with the compute subset of Roadmap 2026
   in `DEVICE.md`. CPU is limited to tokenization/orchestration.
 - No prebuilt engine binary; only source and build scripts are submitted.
+- The grading build runs in a clean container containing only the submitted
+  files. `data/`, `docs/` and `ref/` are not present during the build; do not
+  read them at build time or hard-code `/workspace` paths.
 
 ## 2. Correctness (primary)
 
@@ -30,7 +33,7 @@ not run CPU inference. The correctness score is a weighted mean:
 | dequant | 0.15 | fraction of sampled tensors whose f32 values match the reference exactly (PTQ1_0 widened from f16; F32 copied) and whose `tensor_info` type/rank/shape match the GGUF |
 | logits | 0.30 | per prompt at n_ctx 512/2048/4096/8192: top-1 match, mean KL, cosine |
 | positions | 0.15 | hidden corpus at n_ctx 512/2048: top-1 agreement and mean KL across positions |
-| greedy | 0.30 | teacher-forced agreement over 64 steps after 64/2048/8192-token prompts, plus a `generate` smoke test |
+| greedy | 0.30 | teacher-forced agreement over 64 steps after 64/2048/8192-token prompts (n_ctx 1024/4096/16384), plus a `generate` smoke test |
 
 Reference points from the CPU-vs-Vulkan llama.cpp comparison on this machine:
 logits cosine 0.9998–0.99997, top-1 agreement 97.8–98.8%, mean KLD

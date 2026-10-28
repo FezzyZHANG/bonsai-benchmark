@@ -106,7 +106,7 @@ if ! podman network exists "$EGRESS_NET"; then
 fi
 
 cleanup() {
-  podman logs "$PNAME" >"$RUN/proxy.jsonl" 2>/dev/null || true
+  podman logs "$PNAME" >"$ROOT/$NAME.proxy.jsonl" 2>/dev/null || true
   podman rm -f "$PNAME" >/dev/null 2>&1 || true
   podman rm -f "$ANAME" >/dev/null 2>&1 || true
 }

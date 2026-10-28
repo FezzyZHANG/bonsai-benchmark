@@ -29,6 +29,10 @@ The library must be self-contained:
 - It must not link to or execute llama.cpp/ggml, or any prebuilt inference
   engine. All model computation must go through Vulkan compute shaders.
 - No network access is available. The build must not fetch dependencies.
+- The grading build runs in a clean container containing only the files you
+  submit. `data/`, `docs/` and `ref/` are not present at build time; do not
+  read them from `build.zig` or embed them, and do not hard-code `/workspace`
+  paths. Anything the build needs must live in the submission.
 
 ## Environment
 
@@ -76,7 +80,9 @@ required.
 - The engine must create a Vulkan device from the provided GPU and run all
   model math on it. CPU use is limited to tokenization, orchestration and
   ordinary buffer management.
-- Support at least `n_ctx = 8192`; the model's training context is 262144.
+- Support at least `n_ctx = 16384`; the harness creates contexts up to 16384
+  (the long greedy case and the VRAM measurement). The model's training context
+  is 262144.
 - The harness calls the ABI single-threaded; the engine may use its own worker
   threads. Calls must not crash on malformed input; return a negative error and
   set `bonsai_last_error()`.

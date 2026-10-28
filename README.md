@@ -88,7 +88,7 @@ container). `RUN_TIMEOUT` bounds the run (default 2 h).
 - GPU: `--device /dev/dri --group-add keep-groups`; the image carries Mesa
   RADV. Use the host's `render` group/ACL as in the investigation.
 - The transcript is `RUNS_ROOT/RUN_NAME.transcript.jsonl`; proxy JSONL is
-  `RUNS_ROOT/RUN_NAME/proxy.jsonl`.
+  `RUNS_ROOT/RUN_NAME.proxy.jsonl`.
 - Each run has a wall-clock budget (`RUN_TIMEOUT`, default 2 h). The deadline
   is exported as `BENCH_DEADLINE_EPOCH` and `time-left` prints the remainder;
   the runner records start/end/timeout in `RUN_NAME.meta.json`. Only the
@@ -205,4 +205,5 @@ The benchmark is implemented and calibrated end to end:
   with a documented 2-hour wall-clock budget.
 
 See `reports/calibration.md` for the numbers and `reports/roadmap2026_support.md`
-for the Roadmap 2026 device check.
+for the Roadmap 2026 device check. Open review follow-ups that do not block an
+honest run are recorded in `reports/review_followups.md`.

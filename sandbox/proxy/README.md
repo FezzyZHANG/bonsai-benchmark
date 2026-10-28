@@ -23,4 +23,4 @@ container. Claude Code inside the agent container uses
 The launcher derives Deno's `--allow-net` from `HOST:PORT` and the upstream
 host/port, so the proxy itself cannot be used to reach arbitrary hosts.
 
-Logs are JSONL on stdout, captured to `RUNS_ROOT/RUN_NAME/proxy.jsonl`.
+Logs are JSONL on stdout, captured to `RUNS_ROOT/RUN_NAME.proxy.jsonl`.

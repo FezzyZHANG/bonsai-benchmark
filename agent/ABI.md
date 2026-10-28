@@ -63,8 +63,11 @@ int32_t  bonsai_generate_greedy(bonsai_context *ctx,
 - `bonsai_tokenize` implements the model's tokenizer from the GGUF metadata:
   GPT-2 byte-level BPE with the `qwen35` pre-tokenizer described in
   `TOKENIZER.md`.
-- `add_bos != 0` prepends the model BOS id (248044). The reference uses
-  `add_bos = 0`.
+- `add_bos != 0` requests BOS insertion. This model's GGUF sets
+  `tokenizer.ggml.add_bos_token = false`, so the reference (`llama_tokenize`
+  with `add_special = add_bos != 0`) does **not** prepend BOS even when
+  `add_bos != 0`; the ids are the same as with `add_bos = 0`. The harness
+  always calls with `add_bos = 0`.
 - Special tokens contained in the GGUF vocabulary are matched atomically as
   their UTF-8 byte sequences. No chat template is applied.
 - If `ids == NULL`, return the required number of ids without writing.
