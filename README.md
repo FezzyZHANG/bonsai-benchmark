@@ -60,6 +60,18 @@ Unless skipped, it also builds:
   1.4.363.0, Python env, Claude Code 2.1.310
 - `bonsai-proxy:1.0` — Deno 2.9.7 with the vendored credential-injecting proxy
 
+### macOS local development
+
+For local runner development on macOS, use `sandbox/setup_local.sh`. It
+creates an isolated Python data environment and runs the portable regression
+and proxy checks without downloading model weights or starting a paid agent
+run. If the Codex adapter is installed, it also runs its mock CLI integration
+test. See [macOS setup](sandbox/MACOS.md).
+
+`./setup.sh --prepare-only` can prefetch the Linux toolchains and model
+artifacts, but skips reference builds, container images and device capture.
+Official GPU grading still requires the Linux/RADV target in `agent/DEVICE.md`.
+
 ## Running an agent
 
 ```bash

@@ -1,27 +1,33 @@
 #!/bin/bash
 # Fetch everything the benchmark needs that is not tracked in git.
 #
-#   ./setup.sh [--skip-images] [--skip-ref] [--skip-data]
+#   ./setup.sh [--prepare-only] [--skip-images] [--skip-ref] [--skip-data]
 #
 # Idempotent. Needs network, git, curl, tar, xz, cmake, g++, python3, podman.
 set -euo pipefail
-BENCH="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
+BENCH="$(cd "$(dirname "$0")" && pwd)"
 cd "$BENCH"
 INV="${BONSAI_INVESTIGATION:-$BENCH/../bonsai-investigation}"
 
-SKIP_IMAGES=0; SKIP_REF=0; SKIP_DATA=0
+SKIP_IMAGES=0; SKIP_REF=0; SKIP_DATA=0; PREPARE_ONLY=0
 for arg in "$@"; do
   case "$arg" in
+    --prepare-only) PREPARE_ONLY=1; SKIP_IMAGES=1; SKIP_REF=1 ;;
     --skip-images) SKIP_IMAGES=1 ;;
     --skip-ref) SKIP_REF=1 ;;
     --skip-data) SKIP_DATA=1 ;;
     *) echo "unknown option $arg" >&2; exit 1 ;;
   esac
 done
+if [ "$(uname -s)" != Linux ] && [ "$PREPARE_ONLY" = 0 ]; then
+  echo 'Official evaluation requires Linux/RADV. On macOS use --prepare-only to download artifacts, or sandbox/setup_local.sh for runner development.' >&2
+  exit 1
+fi
 
 log() { echo "==> $*"; }
 need() { command -v "$1" >/dev/null || { echo "missing required tool: $1" >&2; exit 1; }; }
-for t in git curl tar xz cmake g++ python3 sha256sum; do need "$t"; done
+for t in git curl tar xz python3 sha256sum; do need "$t"; done
+if [ "$SKIP_REF" = 0 ]; then for t in cmake g++; do need "$t"; done; fi
 
 DL=deps/downloads
 TC=deps/toolchains
@@ -33,7 +39,7 @@ mkdir -p "$DL" "$TC" "$DOCS" "$DATA"
 fetch() { # file url
   if [ ! -f "$DL/$1" ]; then
     log "download $1"
-    curl -fL --retry 3 -o "$DL/$1.part" "$2"
+    curl -fsSL --retry 3 -C - -o "$DL/$1.part" "$2"
     mv "$DL/$1.part" "$DL/$1"
   fi
   (cd "$DL" && awk -v f="$1" '$2 == f' SHA256SUMS | sha256sum -c --quiet -) \
@@ -72,7 +78,7 @@ mkdir -p "$DOCS/device"
 cp -f "$VK/share/vulkan/registry/profiles/VP_KHR_roadmap.json" "$DOCS/device/VP_KHR_roadmap.json"
 cp -f "$DOCS/Roadmap-2026.adoc" "$DOCS/device/Roadmap-2026.adoc"
 cp -f "$TC/zig-x86_64-linux-0.17.0/doc/langref.html" "$DOCS/zig-langref.html" 2>/dev/null || true
-if [ ! -s "$DOCS/device/vulkaninfo.json" ]; then
+if [ "$(uname -s)" = Linux ] && [ ! -s "$DOCS/device/vulkaninfo.json" ]; then
   tmp=$(mktemp -d)
   VK_ABS="$BENCH/$VK"
   (cd "$tmp" && LD_LIBRARY_PATH="$VK_ABS/lib/VulkanLoader/lib" \
@@ -120,7 +126,7 @@ if [ "$SKIP_DATA" = 0 ]; then
       ln "$SRC_GGUF" "$GGUF" 2>/dev/null || cp --reflink=auto "$SRC_GGUF" "$GGUF"
     else
       log "download GGUF"
-      curl -fL --retry 3 -o "$GGUF.part" \
+      curl -fsSL --retry 3 -C - -o "$GGUF.part" \
         "https://huggingface.co/prism-ml/Ternary-Bonsai-2-4B-gguf/resolve/main/Ternary-Bonsai-2-4B-PTQ1_0.gguf"
       mv "$GGUF.part" "$GGUF"
     fi
@@ -167,7 +173,11 @@ if [ "$SKIP_IMAGES" = 0 ]; then
   sandbox/build_images.sh
 fi
 
-log "setup complete"
+if [ "$PREPARE_ONLY" = 1 ]; then
+  log "artifacts prepared; reference binaries, container images and GPU grading are NOT configured"
+else
+  log "setup complete"
+fi
 echo "Zig:        $TC/zig-x86_64-linux-0.17.0/zig"
 echo "Vulkan SDK: $VK"
 echo "Reference:  deps/ref/bin"

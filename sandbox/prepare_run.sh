@@ -3,14 +3,19 @@
 #
 #   sandbox/prepare_run.sh RUN_NAME [RUNS_ROOT]
 set -euo pipefail
-BENCH="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
+BENCH="$(cd "$(dirname "$0")/.." && pwd)"
 NAME="${1:?usage: prepare_run.sh RUN_NAME [RUNS_ROOT]}"
-ROOT="${2:-/mnt/workspace/bonsai-runs}"
+ROOT="${2:-${RUNS_ROOT:-/mnt/workspace/bonsai-runs}}"
+case "$NAME" in ''|.|..|*[!a-zA-Z0-9_.-]*) echo 'invalid RUN_NAME' >&2; exit 1;; esac
+ROOT="$(python3 -c 'import pathlib,sys; print(pathlib.Path(sys.argv[1]).resolve())' "$ROOT")"
 RUN="$ROOT/$NAME"
-case "$RUN" in "$BENCH"/*) echo "RUNS_ROOT must be outside $BENCH" >&2; exit 1;; esac
+case "$RUN" in "$BENCH"|"$BENCH"/*) echo "RUNS_ROOT must be outside $BENCH" >&2; exit 1;; esac
 [ -e "$RUN" ] && { echo "$RUN already exists" >&2; exit 1; }
 mkdir -p "$ROOT"
-cp -R --no-preserve=all "$BENCH/agent" "$RUN"
+python3 - "$BENCH/agent" "$RUN" <<'COPY'
+import shutil, sys
+shutil.copytree(sys.argv[1], sys.argv[2], copy_function=shutil.copyfile)
+COPY
 find "$RUN" -xdev -name __pycache__ -prune -exec rm -rf {} +
 mkdir -p "$RUN/.tmp" "$RUN/.claude-home"
 printf '{}\n' > "$RUN/.claude.json"
@@ -25,7 +30,7 @@ Workspace: $RUN
 Settings:  $OUT
 
 Run (set ANTHROPIC_BASE_URL and ANTHROPIC_AUTH_TOKEN first):
-  ANTHROPIC_BASE_URL=... ANTHROPIC_AUTH_TOKEN=... $BENCH/sandbox/run_agent.sh $NAME
+  ANTHROPIC_BASE_URL=... ANTHROPIC_AUTH_TOKEN=... "$BENCH/sandbox/run_agent.sh" "$NAME" "$ROOT"
 
 Grade afterwards:
   python3 $BENCH/verification/verify.py $RUN --out $ROOT/$NAME-report

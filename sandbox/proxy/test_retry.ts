@@ -49,7 +49,7 @@ const upstream = Deno.serve({ hostname: "127.0.0.1", port: mockPort }, () => {
 // anthropic-proxy.sh is exercised too (a missing --allow-env entry is a
 // startup failure in the sandbox).
 const proxy = new Deno.Command("/bin/bash", {
-  args: ["/proxy/anthropic-proxy.sh"],
+  args: [decodeURIComponent(new URL("./anthropic-proxy.sh", import.meta.url).pathname)],
   env: {
     HOST: "127.0.0.1",
     PORT: String(proxyPort),

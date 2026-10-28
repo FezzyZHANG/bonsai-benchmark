@@ -90,7 +90,7 @@ if [[ $ANTHROPIC_BASE_URL == *"?"* || $ANTHROPIC_BASE_URL == *"#"* ]]; then
   die "ANTHROPIC_BASE_URL must not contain a query string or fragment"
 fi
 
-lower_url=${ANTHROPIC_BASE_URL,,}
+lower_url=$(printf '%s' "$ANTHROPIC_BASE_URL" | tr '[:upper:]' '[:lower:]')
 [[ $lower_url =~ ^(https?):// ]] ||
   die "ANTHROPIC_BASE_URL must be an absolute http(s) URL (got '$ANTHROPIC_BASE_URL')"
 scheme=${BASH_REMATCH[1]}
@@ -136,7 +136,7 @@ else
   upstream_port=$normalized_port
 fi
 
-upstream_host=${upstream_host,,}
+upstream_host=$(printf '%s' "$upstream_host" | tr '[:upper:]' '[:lower:]')
 if ((is_ipv6)); then
   upstream_net="[$upstream_host]:$upstream_port"
 else
