@@ -28,7 +28,7 @@ PROXY_IP="${PROXY_IP:-10.89.0.2}"
 AGENT_IP="${AGENT_IP:-10.89.0.3}"
 PNAME="bonsai-proxy-$NAME"
 ANAME="bonsai-agent-$NAME"
-RUN_TIMEOUT="${RUN_TIMEOUT:-14400}"   # wall-clock budget, seconds (default 4 h)
+RUN_TIMEOUT="${RUN_TIMEOUT:-7200}"    # wall-clock budget, seconds (default 2 h)
 DEADLINE_EPOCH=$(( $(date +%s) + RUN_TIMEOUT ))
 
 # Optional model pin for benchmarking several models through the same proxy.

@@ -297,6 +297,7 @@ def main():
     rep["correctness"] = res["correctness"]
     rep["agent_vram_peak_bytes"] = res.get("vram_peak_bytes")
     rep["agent_host_rss_bytes"] = res.get("host_peak_rss_bytes")
+    rep["child_processes"] = res.get("child_processes")
 
     if not args.skip_perf and "perf" not in res:
         rep["perf"] = {"rows": {}, "speedup_geomean": 0.0,

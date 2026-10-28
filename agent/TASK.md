@@ -59,7 +59,7 @@ Everything is offline. Available tools and data:
 
 The session is terminated at a fixed wall-clock deadline. `BENCH_DEADLINE_EPOCH`
 holds the deadline as Unix time, and `time-left` prints the remaining time. The
-default budget is 4 hours; trust the environment variable if it differs.
+default budget is 2 hours; trust the environment variable if it differs.
 
 Only files in this workspace at the deadline are graded. The conversation is
 not saved for grading, so write code, run tests and update `NOTES.md`

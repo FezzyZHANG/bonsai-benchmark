@@ -69,7 +69,7 @@ ANTHROPIC_BASE_URL=https://... ANTHROPIC_AUTH_TOKEN=... sandbox/run_agent.sh run
 
 Set `BENCH_MODEL=<model-id>` to pin the model through the proxy (it exports
 `ANTHROPIC_MODEL` and the `ANTHROPIC_DEFAULT_*_MODEL` variables inside the
-container). `RUN_TIMEOUT` bounds the run (default 4 h).
+container). `RUN_TIMEOUT` bounds the run (default 2 h).
 
 - The run directory is outside this repo (default `/mnt/workspace/bonsai-runs`).
 - The agent container has **no internet route**. It is attached only to the
@@ -89,7 +89,7 @@ container). `RUN_TIMEOUT` bounds the run (default 4 h).
   RADV. Use the host's `render` group/ACL as in the investigation.
 - The transcript is `RUNS_ROOT/RUN_NAME.transcript.jsonl`; proxy JSONL is
   `RUNS_ROOT/RUN_NAME/proxy.jsonl`.
-- Each run has a wall-clock budget (`RUN_TIMEOUT`, default 4 h). The deadline
+- Each run has a wall-clock budget (`RUN_TIMEOUT`, default 2 h). The deadline
   is exported as `BENCH_DEADLINE_EPOCH` and `time-left` prints the remainder;
   the runner records start/end/timeout in `RUN_NAME.meta.json`. Only the
   workspace at the deadline is graded, and the docs tell the agent to save
