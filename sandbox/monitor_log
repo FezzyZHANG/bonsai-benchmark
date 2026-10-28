@@ -201,7 +201,7 @@ def render(event, style, state, tool_names, progress):
             out(prefix + style(
                 "task",
                 f"[task] {event.get('status', '?')}: {event.get('summary', '')}"))
-        elif sub == "ui_invalidate":
+        elif sub == "ui_invalidate" or sub == "thinking_tokens":
             return
         else:
             body = {k: v for k, v in event.items()
@@ -360,11 +360,11 @@ def main():
     ap.add_argument("path")
     ap.add_argument("--no-follow", action="store_true",
                     help="print the existing transcript and exit")
-    ap.add_argument("--no-color", action="store_true",
-                    help="disable ANSI color")
+    ap.add_argument("--color", default="auto", choices=["never", "auto", "always"],
+                    help="ANSI color")
     args = ap.parse_args()
 
-    style = Style(sys.stdout.isatty() and not args.no_color
+    style = Style(args.color == "always" or sys.stdout.isatty() and not args.color == "never"
                   and not os.environ.get("NO_COLOR"))
     try:
         follow(args.path, args.no_follow, style)
