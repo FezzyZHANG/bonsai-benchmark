@@ -1,0 +1,382 @@
+#!/usr/bin/env python3
+"""Human-readable tail for Claude Code stream-json transcripts.
+
+Usage:
+    monitor_log [--no-follow] [--no-color] PATH
+
+Prints the existing events from the start of the file, then follows new events
+until interrupted (like `tail -f -n +1`). With --no-follow, prints the file and
+exits. Only the Python standard library is used.
+"""
+import argparse
+import datetime as dt
+import json
+import os
+import sys
+import time
+
+MAX_TOOL_INPUT = 3000
+MAX_TOOL_OUTPUT = 4000
+MAX_TEXT = 8000
+MAX_LINES = 40
+
+_ANSI = {
+    "assistant": "36",
+    "tool": "34",
+    "result": "32",
+    "error": "31",
+    "system": "90",
+    "task": "35",
+    "thinking": "90",
+    "user": "33",
+    "time": "90",
+}
+
+
+class Style:
+    def __init__(self, enabled):
+        self.enabled = enabled
+
+    def __call__(self, role, text):
+        if not self.enabled or role not in _ANSI:
+            return text
+        return f"\033[{_ANSI[role]}m{text}\033[0m"
+
+
+def out(text):
+    sys.stdout.write(text + "\n")
+    sys.stdout.flush()
+
+
+def clock(ts, state):
+    if ts:
+        try:
+            local = dt.datetime.fromisoformat(
+                ts.replace("Z", "+00:00")).astimezone().strftime("%H:%M:%S")
+            state["last_ts"] = local
+            return local
+        except ValueError:
+            pass
+    return state.get("last_ts") or "--:--:--"
+
+
+def clip(text, limit, lines=MAX_LINES):
+    text = str(text).rstrip()
+    if len(text) > limit:
+        text = text[:limit].rstrip() + " ..."
+    parts = text.splitlines()
+    if len(parts) > lines:
+        parts = parts[:lines] + [f"... ({len(parts) - lines} more lines)"]
+    return "\n".join(parts)
+
+
+def indent(text, prefix="    "):
+    return "\n".join(prefix + line if line else prefix.rstrip()
+                    for line in text.splitlines())
+
+
+def content_text(content):
+    if content is None:
+        return ""
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts = []
+        for block in content:
+            if isinstance(block, str):
+                parts.append(block)
+            elif isinstance(block, dict):
+                kind = block.get("type")
+                if kind == "text":
+                    parts.append(block.get("text", ""))
+                elif kind == "image":
+                    parts.append("[image]")
+                else:
+                    parts.append(f"[{kind}]")
+        return "\n".join(p for p in parts if p)
+    return json.dumps(content, ensure_ascii=False)
+
+
+def tool_summary(name, inp):
+    if not isinstance(inp, dict):
+        return json.dumps(inp, ensure_ascii=False)
+    if name == "Bash":
+        return inp.get("command", "")
+    if name == "Write":
+        body = inp.get("content", "")
+        return f"{inp.get('file_path', '?')} ({len(str(body))} chars)"
+    if name in ("Edit", "Read", "NotebookEdit"):
+        return str(inp.get("file_path", "?"))
+    if name == "WebFetch":
+        return str(inp.get("url", "?"))
+    if name == "WebSearch":
+        return str(inp.get("query", "?"))
+    if name in ("Task", "Agent"):
+        return str(inp.get("description") or inp.get("prompt", ""))
+    return json.dumps(inp, ensure_ascii=False)
+
+
+def render(event, style, state, tool_names, progress):
+    typ = event.get("type")
+    sub = event.get("subtype")
+    prefix = style("time", f"{clock(event.get('timestamp'), state)} ")
+
+    if typ == "assistant":
+        msg = event.get("message") or {}
+        for block in msg.get("content") or []:
+            if not isinstance(block, dict):
+                continue
+            kind = block.get("type")
+            if kind == "text":
+                text = block.get("text", "").strip()
+                if text:
+                    out(prefix + style("assistant", "[assistant]"))
+                    out(indent(clip(text, MAX_TEXT, 200)))
+            elif kind == "thinking":
+                text = block.get("thinking", "").strip()
+                if text:
+                    out(prefix + style("thinking", "[thinking]"))
+                    out(indent(clip(text, 4000, 40)))
+            elif kind == "redacted_thinking":
+                out(prefix + style("thinking", "[thinking redacted]"))
+            elif kind in ("tool_use", "server_tool_use"):
+                name = block.get("name", "?")
+                tid = block.get("id")
+                if tid:
+                    tool_names[tid] = name
+                inp = block.get("input") or {}
+                summary = tool_summary(name, inp)
+                if name == "Bash":
+                    out(prefix + style("tool", f"[tool] {name}:"))
+                    out(indent(clip(summary, MAX_TOOL_INPUT, 30)))
+                else:
+                    out(prefix + style("tool", f"[tool] {name}: ") +
+                        clip(summary, MAX_TOOL_INPUT, 10))
+        return
+
+    if typ == "user":
+        msg = event.get("message") or {}
+        for block in msg.get("content") or []:
+            if not isinstance(block, dict):
+                continue
+            kind = block.get("type")
+            if kind == "tool_result":
+                tid = block.get("tool_use_id")
+                name = tool_names.get(tid, "tool")
+                is_err = bool(block.get("is_error"))
+                label = "error" if is_err else "result"
+                role = "error" if is_err else "result"
+                out(prefix + style(role, f"[{label}] {name}:"))
+                text = content_text(block.get("content"))
+                if text.strip():
+                    out(indent(clip(text, MAX_TOOL_OUTPUT, MAX_LINES)))
+                else:
+                    out(indent("(no output)"))
+            elif kind == "text":
+                text = block.get("text", "").strip()
+                if text:
+                    out(prefix + style("user", "[user]"))
+                    out(indent(clip(text, MAX_TEXT, 100)))
+            elif isinstance(kind, str) and kind.endswith("_tool_result"):
+                out(prefix + style("result", f"[{kind}]"))
+                out(indent(clip(content_text(block.get("content")),
+                                MAX_TOOL_OUTPUT, MAX_LINES)))
+        return
+
+    if typ == "system":
+        if sub == "init":
+            tools = event.get("tools") or []
+            mcp = event.get("mcp_servers") or []
+            out(prefix + style(
+                "system",
+                f"[init] model={event.get('model', '?')} "
+                f"cwd={event.get('cwd', '?')} "
+                f"permission={event.get('permissionMode', '?')} "
+                f"tools={len(tools)} mcp={len(mcp)} "
+                f"claude={event.get('claude_code_version', '?')}"))
+        elif sub == "task_started":
+            out(prefix + style("task",
+                               f"[task] started: {event.get('description', '?')}"))
+        elif sub == "task_notification":
+            out(prefix + style(
+                "task",
+                f"[task] {event.get('status', '?')}: {event.get('summary', '')}"))
+        elif sub == "ui_invalidate":
+            return
+        else:
+            body = {k: v for k, v in event.items()
+                    if k not in ("type", "subtype", "uuid", "session_id",
+                                 "timestamp")}
+            out(prefix + style(
+                "system",
+                f"[system:{sub or '?'}] " +
+                clip(json.dumps(body, ensure_ascii=False), 500, 3)))
+        return
+
+    if typ == "tool_progress":
+        name = event.get("tool_name", "tool")
+        elapsed = event.get("elapsed_time_seconds")
+        key = event.get("tool_use_id") or name
+        now = time.monotonic()
+        if key not in progress or now - progress[key] >= 10:
+            progress[key] = now
+            if elapsed is not None:
+                out(prefix + style("system",
+                                   f"[running] {name} {float(elapsed):.0f}s"))
+        return
+
+    if typ == "result":
+        is_err = bool(event.get("is_error")) or (sub is not None and sub != "success")
+        role = "error" if is_err else "result"
+        duration = (event.get("duration_ms") or 0) / 1000.0
+        api = (event.get("duration_api_ms") or 0) / 1000.0
+        parts = [f"[done] {sub or '?'}"]
+        if event.get("num_turns") is not None:
+            parts.append(f"turns={event['num_turns']}")
+        if duration:
+            parts.append(f"duration={duration:.1f}s")
+        if api:
+            parts.append(f"api={api:.1f}s")
+        if event.get("total_cost_usd") is not None:
+            parts.append(f"cost=${event['total_cost_usd']:.4f}")
+        out(prefix + style(role, " ".join(parts)))
+        usage = event.get("usage") or {}
+        if usage:
+            out(indent(style(
+                "system",
+                f"input={usage.get('input_tokens', 0)} "
+                f"output={usage.get('output_tokens', 0)} "
+                f"cache_read={usage.get('cache_read_input_tokens', 0)} "
+                f"cache_write={usage.get('cache_creation_input_tokens', 0)}"),
+                "       "))
+        denials = event.get("permission_denials") or []
+        if denials:
+            names = ", ".join(
+                d.get("tool_name", "?") for d in denials if isinstance(d, dict))
+            out(indent(style("error", f"denied: {len(denials)} ({names})"),
+                       "       "))
+        result = event.get("result")
+        if result:
+            out(indent(clip(str(result), MAX_TEXT, 100)))
+        return
+
+    if typ == "stream_event":
+        return
+
+    if typ == "rate_limit_event":
+        out(prefix + style(
+            "system",
+            f"[rate-limit] " +
+            clip(json.dumps(event, ensure_ascii=False), 500, 3)))
+        return
+
+    body = {k: v for k, v in event.items()
+            if k not in ("type", "subtype", "uuid", "session_id", "timestamp")}
+    tag = typ or "?"
+    if sub:
+        tag += f"/{sub}"
+    out(prefix + style("system",
+                       f"[{tag}] " +
+                       clip(json.dumps(body, ensure_ascii=False), 500, 3)))
+
+
+def emit_line(raw, final, style, state, tool_names, progress):
+    text = raw.decode("utf-8", "replace").strip()
+    if not text:
+        return True
+    try:
+        event = json.loads(text)
+    except json.JSONDecodeError:
+        if final:
+            out(style("error", "[unparsed] ") + clip(text, 1000, 5))
+            return True
+        return False
+    render(event, style, state, tool_names, progress)
+    return True
+
+
+def follow(path, no_follow, style):
+    state = {}
+    tool_names = {}
+    progress = {}
+
+    if no_follow:
+        with open(path, "rb") as f:
+            data = f.read()
+        for raw in data.split(b"\n"):
+            emit_line(raw, True, style, state, tool_names, progress)
+        return
+
+    waiting = False
+    while not os.path.exists(path):
+        if not waiting:
+            sys.stderr.write(f"monitor_log: waiting for {path}\n")
+            sys.stderr.flush()
+            waiting = True
+        time.sleep(0.5)
+    if waiting:
+        sys.stderr.write(f"monitor_log: following {path}\n")
+        sys.stderr.flush()
+
+    f = open(path, "rb")
+    inode = os.fstat(f.fileno()).st_ino
+    buf = b""
+    try:
+        while True:
+            chunk = f.read(65536)
+            if chunk:
+                buf += chunk
+                while b"\n" in buf:
+                    raw, buf = buf.split(b"\n", 1)
+                    emit_line(raw, True, style, state, tool_names, progress)
+                continue
+
+            if buf.strip():
+                if emit_line(buf, False, style, state, tool_names, progress):
+                    buf = b""
+
+            try:
+                st = os.stat(path)
+            except FileNotFoundError:
+                time.sleep(0.2)
+                continue
+            if st.st_ino != inode:
+                f.close()
+                f = open(path, "rb")
+                inode = os.fstat(f.fileno()).st_ino
+                buf = b""
+            elif st.st_size < f.tell():
+                f.seek(0)
+                buf = b""
+            time.sleep(0.2)
+    finally:
+        f.close()
+
+
+def main():
+    ap = argparse.ArgumentParser(
+        description="Print a Claude Code stream-json transcript readably and "
+                    "follow it like tail -f.")
+    ap.add_argument("path")
+    ap.add_argument("--no-follow", action="store_true",
+                    help="print the existing transcript and exit")
+    ap.add_argument("--no-color", action="store_true",
+                    help="disable ANSI color")
+    args = ap.parse_args()
+
+    style = Style(sys.stdout.isatty() and not args.no_color
+                  and not os.environ.get("NO_COLOR"))
+    try:
+        follow(args.path, args.no_follow, style)
+    except KeyboardInterrupt:
+        return 0
+    except BrokenPipeError:
+        return 0
+    except FileNotFoundError:
+        sys.stderr.write(f"monitor_log: {args.path}: no such file\n")
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

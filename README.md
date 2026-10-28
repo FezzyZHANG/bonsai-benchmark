@@ -95,6 +95,10 @@ container). `RUN_TIMEOUT` bounds the run (default 2 h).
   RADV. Use the host's `render` group/ACL as in the investigation.
 - The transcript is `RUNS_ROOT/RUN_NAME.transcript.jsonl`; proxy JSONL is
   `RUNS_ROOT/RUN_NAME.proxy.jsonl`.
+- To watch a run, `sandbox/monitor_log RUNS_ROOT/RUN_NAME.transcript.jsonl`
+  prints the existing stream-json events in a readable form and follows new
+  ones like `tail -f` (`--no-follow` prints a finished transcript and exits;
+  `--no-color` or `NO_COLOR` disables ANSI color).
 - Each run has a wall-clock budget (`RUN_TIMEOUT`, default 2 h). The deadline
   is exported as `BENCH_DEADLINE_EPOCH` and `time-left` prints the remainder;
   the runner records start/end/timeout in `RUN_NAME.meta.json`. Only the
