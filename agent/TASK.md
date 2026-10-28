@@ -27,7 +27,9 @@ The library must be self-contained:
   safetensors file, a converted sidecar, or any other model file at runtime.
 - It must not embed model weights or precomputed results in the submission.
 - It must not link to or execute llama.cpp/ggml, or any prebuilt inference
-  engine. All model computation must go through Vulkan compute shaders.
+  engine. All model computation must go through Vulkan compute shaders; the
+  definition of model computation and the CPU allowlist are under Target and
+  constraints.
 - No network access is available. The build must not fetch dependencies.
 - The grading build runs in a clean container containing only the files you
   submit. `data/`, `docs/` and `ref/` are not present at build time; do not
@@ -86,9 +88,16 @@ required.
 - Target **Vulkan 1.4** and the compute-relevant Vulkan Roadmap 2026 feature
   subset in `DEVICE.md`. The GPU does not support three non-compute Roadmap 2026
   items (presentation/copy/host-image); those are not required.
-- The engine must create a Vulkan device from the provided GPU and run all
-  model math on it. CPU use is limited to tokenization, orchestration and
-  ordinary buffer management.
+- The engine must create a Vulkan device from the provided GPU and run the
+  model's forward pass on it. **Model computation** means every arithmetic
+  operation on model weights or activations in the forward pass, including
+  normalization, activations (silu/sigmoid), softmax, RoPE, the GDN
+  recurrence, conv1d, KV-cache updates and projections. All of it must be
+  issued as Vulkan compute work. CPU code is limited to tokenization, Vulkan
+  command/memory orchestration and I/O; CPU tensor arithmetic is a violation,
+  including a CPU fallback used when Vulkan initialization fails (fail
+  instead). A submission that performs model computation on the CPU is
+  non-compliant even if it passes correctness and the VRAM residency gate.
 - Support at least `n_ctx = 16384`; the harness creates contexts up to 16384
   (the long greedy case and the VRAM measurement). The model's training context
   is 262144.

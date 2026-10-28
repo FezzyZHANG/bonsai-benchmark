@@ -15,7 +15,15 @@ separately.
   does not embed model weights, does not link/execute llama.cpp or another
   inference engine, and does not use the network.
 - All model computation uses Vulkan 1.4 with the compute subset of Roadmap 2026
-  in `DEVICE.md`. CPU is limited to tokenization/orchestration.
+  in `DEVICE.md`. "Model computation" is every arithmetic operation on model
+  weights or activations in the forward pass (normalization, activations,
+  softmax, RoPE, the GDN recurrence, conv1d, KV-cache updates, projections).
+  CPU is limited to tokenization, Vulkan command/memory orchestration and I/O;
+  CPU tensor arithmetic is a violation, including a CPU fallback.
+- Correctness and the VRAM residency gate do not prove GPU computation: a CPU
+  implementation with the weights resident in VRAM passes both. This is a
+  structural requirement subject to source review; documented CPU model math
+  makes the submission non-compliant.
 - No prebuilt engine binary; only source and build scripts are submitted.
 - The grading build runs in a clean container containing only the submitted
   files. `data/`, `docs/` and `ref/` are not present during the build; do not
