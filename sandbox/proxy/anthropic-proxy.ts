@@ -8,6 +8,11 @@
  *   ANTHROPIC_BASE_URL    upstream base URL, e.g. https://api.anthropic.com
  *   ANTHROPIC_AUTH_TOKEN  token sent upstream as "Authorization: Bearer <token>"
  *
+ * Optional environment variables:
+ *   RETRY_RATE_LIMIT_422          retries for a token rate limit reported as
+ *                                 HTTP 422 (default 6, 0 disables)
+ *   RETRY_RATE_LIMIT_MAX_WAIT_S   cap for one retry delay (default 20 s)
+ *
  * Every request and response (headers included) is written to stdout as one
  * JSON object per line. All other output goes to stderr, so stdout is pure JSONL.
  *
@@ -102,6 +107,39 @@ if (!Number.isInteger(maxRequests) || maxRequests < 0) {
   fail(`MAX_REQUESTS must be a non-negative integer (got ${JSON.stringify(maxRequestsRaw)})`);
 }
 const logBodies = (Deno.env.get("LOG_BODIES")?.trim() ?? "1") !== "0";
+
+// Some gateways report an upstream per-minute token limit as HTTP 422 rather
+// than 429 (cc-switch: "Rate limit reached ... Please try again in N s").
+// Claude Code treats 422 as a fatal request error and does not retry it, so
+// the proxy re-issues the request after the delay the upstream asks for. A 422
+// that is not a token rate limit passes through unchanged.
+const retryRateLimit422Raw = Deno.env.get("RETRY_RATE_LIMIT_422")?.trim() ??
+  "6";
+const retryRateLimit422 = Number(retryRateLimit422Raw);
+if (
+  !Number.isInteger(retryRateLimit422) || retryRateLimit422 < 0 ||
+  retryRateLimit422 > 20
+) {
+  fail(
+    `RETRY_RATE_LIMIT_422 must be an integer between 0 and 20 (got ${
+      JSON.stringify(retryRateLimit422Raw)
+    })`,
+  );
+}
+const retryRateLimitMaxWaitRaw =
+  Deno.env.get("RETRY_RATE_LIMIT_MAX_WAIT_S")?.trim() ?? "20";
+const retryRateLimitMaxWaitS = Number(retryRateLimitMaxWaitRaw);
+if (
+  !Number.isFinite(retryRateLimitMaxWaitS) || retryRateLimitMaxWaitS < 0 ||
+  retryRateLimitMaxWaitS > 120
+) {
+  fail(
+    `RETRY_RATE_LIMIT_MAX_WAIT_S must be a number between 0 and 120 (got ${
+      JSON.stringify(retryRateLimitMaxWaitRaw)
+    })`,
+  );
+}
+const retryRateLimitMaxWaitMs = retryRateLimitMaxWaitS * 1000;
 const authHeaderMode = (Deno.env.get("AUTH_HEADER")?.trim() ?? "authorization").toLowerCase();
 if (!["authorization", "x-api-key", "both"].includes(authHeaderMode)) {
   fail(`AUTH_HEADER must be authorization, x-api-key or both (got ${JSON.stringify(authHeaderMode)})`);
@@ -250,6 +288,32 @@ function bodyForLog(
     body_encoding: "base64",
     body_bytes: bytes.byteLength,
   };
+}
+
+const tolerantDecoder = new TextDecoder("utf-8");
+
+function isTokenRateLimit(message: string): boolean {
+  return /rate limit reached/i.test(message) &&
+    /(tokens per min|\bTPM\b)/i.test(message);
+}
+
+/** Delay before re-issuing a rate-limited request: the upstream's suggestion
+ * when present, capped, otherwise exponential backoff. */
+function rateLimitDelayMs(
+  message: string,
+  attempt: number,
+  capMs: number,
+): number {
+  const match = /(?:try again|retry) in\s*([\d.]+)\s*s/i.exec(message);
+  const suggestedMs = match ? Number(match[1]) * 1000 : Number.NaN;
+  const backoffMs = 1000 * 2 ** (attempt - 1);
+  const baseMs = Number.isFinite(suggestedMs) ? suggestedMs : backoffMs;
+  const jitterMs = Math.random() * 250;
+  return Math.max(250, Math.min(baseMs + jitterMs, capMs));
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function concatChunks(chunks: Uint8Array[]): Uint8Array {
@@ -456,16 +520,7 @@ async function handleRequest(
     ...requestBodyFields,
   });
 
-  let upstream: Response;
-  try {
-    upstream = await fetch(targetUrl, {
-      method: request.method,
-      headers: outboundHeaders,
-      body: fetchForbidsBody ? undefined : requestBytes,
-      redirect: "manual",
-    });
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : String(error);
+  const badGateway = (detail: string): Response => {
     const message = `upstream request failed: ${detail}`;
     const bytes = errorBody("api_error", message);
     const responseHeaders = new Headers({ "content-type": "application/json" });
@@ -481,16 +536,91 @@ async function handleRequest(
       ttfb_ms: elapsed(startedAt),
       duration_ms: elapsed(startedAt),
       upstream_error: detail,
+      retries,
     });
     return new Response(bytes, {
       status: 502,
       statusText: "Bad Gateway",
       headers: responseHeaders,
     });
+  };
+
+  const requestUpstream = () =>
+    fetch(targetUrl, {
+      method: request.method,
+      headers: outboundHeaders,
+      body: fetchForbidsBody ? undefined : requestBytes,
+      redirect: "manual",
+    });
+
+  let upstream: Response;
+  // Set when a 422 body has been consumed for inspection. That response is
+  // returned from this buffer; upstream.body is disturbed at that point.
+  let bufferedBody: Uint8Array<ArrayBuffer> | null = null;
+  let retries = 0;
+  while (true) {
+    try {
+      upstream = await requestUpstream();
+    } catch (error) {
+      return badGateway(error instanceof Error ? error.message : String(error));
+    }
+
+    bufferedBody = null;
+    if (upstream.status !== 422 || retryRateLimit422 === 0) break;
+
+    try {
+      bufferedBody = new Uint8Array(await upstream.arrayBuffer());
+    } catch (error) {
+      return badGateway(error instanceof Error ? error.message : String(error));
+    }
+    const message = tolerantDecoder.decode(bufferedBody);
+    if (!isTokenRateLimit(message) || retries >= retryRateLimit422) break;
+
+    retries += 1;
+    const delayMs = rateLimitDelayMs(
+      message,
+      retries,
+      retryRateLimitMaxWaitMs,
+    );
+    logRecord({
+      ts: new Date().toISOString(),
+      event: "retry",
+      id,
+      remote_addr: remote,
+      attempt: retries,
+      status: upstream.status,
+      reason: "upstream token rate limit reported as 422",
+      delay_ms: Math.round(delayMs),
+    });
+    await sleep(delayMs);
   }
 
   const responseHeaders = copyHeaders(upstream.headers);
   const ttfb = elapsed(startedAt);
+
+  if (bufferedBody !== null) {
+    // Non-rate-limit 422, or a rate-limited 422 with retries exhausted.
+    responseHeaders.delete("content-length");
+    logRecord({
+      ts: new Date().toISOString(),
+      event: "response",
+      id,
+      remote_addr: remote,
+      status: upstream.status,
+      status_text: upstream.statusText,
+      headers: headersForLog(upstream.headers),
+      ...bodyForLog(bufferedBody, upstream.headers.get("content-encoding")),
+      ttfb_ms: ttfb,
+      duration_ms: elapsed(startedAt),
+      stream_end: "complete",
+      retries,
+    });
+    return new Response(bufferedBody, {
+      status: upstream.status,
+      statusText: upstream.statusText,
+      headers: responseHeaders,
+    });
+  }
 
   if (upstream.body === null) {
     logRecord({
@@ -505,6 +635,7 @@ async function handleRequest(
       ttfb_ms: ttfb,
       duration_ms: elapsed(startedAt),
       stream_end: "complete",
+      retries,
     });
     return new Response(null, {
       status: upstream.status,
@@ -529,6 +660,7 @@ async function handleRequest(
         ttfb_ms: ttfb,
         duration_ms: elapsed(startedAt),
         stream_end: kind,
+        retries,
       };
       if (error !== undefined) {
         record.error = error instanceof Error ? error.message : String(error);

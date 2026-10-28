@@ -76,7 +76,10 @@ container). `RUN_TIMEOUT` bounds the run (default 2 h).
   internal podman network and can reach only the proxy container. The proxy
   holds the credential and forwards only the Messages API paths
   (`/v1/messages`, `/v1/messages/count_tokens`, `/v1/models`) configured by
-  `ALLOWED_PATHS`; `MAX_REQUESTS` bounds the budget.
+  `ALLOWED_PATHS`; `MAX_REQUESTS` bounds the budget. It retries a per-minute
+  token limit that a gateway reports as HTTP 422 (cc-switch does); Claude Code
+  treats 422 as fatal, so without the retry the session dies. See
+  `sandbox/proxy/README.md`.
 - Claude Code runs inside the container with `sandbox.enabled = false`
   (`sandbox/settings.template.json`) and `--permission-mode dontAsk`; podman is
   the sandbox. `WebFetch` and `WebSearch` are denied at the Claude permission
