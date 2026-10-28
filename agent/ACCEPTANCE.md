@@ -95,9 +95,9 @@ peak/RSS are measured by the verifier on the same GPU.
 - The reference binaries are not present in the grading container; the engine
   may not spawn them or link llama.cpp/ggml.
 - The submission source must be under 32 MiB (excluding `data/`, `docs/`,
-  `ref/` and Zig build outputs); embedding model weights, a foreign engine
-  binary or generated data is rejected. Linked libraries are checked. No
-  network is available.
+  `ref/`, Zig build outputs, temporary files and Claude Code state); embedding
+  model weights, a foreign engine binary or generated data is rejected. Linked
+  libraries are checked. No network is available.
 - The ABI permits worker threads, not child processes. The harness records
   `RUSAGE_CHILDREN` and live children of the grading process; a library that
   spawns a helper process (for example an embedded engine binary) scores zero.

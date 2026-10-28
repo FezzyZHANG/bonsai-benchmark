@@ -38,11 +38,13 @@ MAX_SUBMISSION_BYTES = 32 * 2**20
 def submission_size(sub):
     """Bytes of regular files, ignoring build outputs and the mounted trees."""
     skip = {".git", "zig-out", ".zig-cache", "zig-cache", "node_modules",
-            ".claude", "data", "docs", "ref"}
+            ".claude", ".claude-home", ".tmp", "data", "docs", "ref"}
     total = 0
     for root, dirs, files in os.walk(sub):
         dirs[:] = [d for d in dirs if d not in skip]
         for name in files:
+            if name == ".claude.json":
+                continue
             try:
                 total += os.path.getsize(os.path.join(root, name))
             except OSError:
@@ -53,7 +55,9 @@ def submission_size(sub):
 def build_submission(sub, work, no_container):
     src = os.path.join(work, "src")
     shutil.copytree(sub, src, ignore=shutil.ignore_patterns(
-        ".git", "zig-out", ".zig-cache", "zig-cache", ".claude", "data", "docs", "ref"))
+        ".git", "zig-out", ".zig-cache", "zig-cache", "node_modules",
+        ".claude", ".claude-home", ".claude.json", ".tmp",
+        "data", "docs", "ref"))
     if no_container:
         zig = os.environ.get("ZIG", os.path.join(BENCH, "deps/toolchains/zig-x86_64-linux-0.17.0/zig"))
         env = dict(os.environ, ZIG_GLOBAL_CACHE_DIR=os.path.join(work, "zig-cache"))
