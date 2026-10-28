@@ -29,11 +29,13 @@ produced by the CPU llama.cpp backend. The correctness score is a weighted mean:
 | dequant | 0.15 | fraction of sampled tensors whose f32 values match the reference exactly (PTQ1_0 values widened from f16; F32 copied) |
 | logits | 0.30 | per prompt at n_ctx 512/2048/4096/8192: top-1 match, mean KL, cosine |
 | positions | 0.15 | hidden corpus at n_ctx 512/2048: top-1 agreement and mean KL across positions |
-| greedy | 0.30 | fraction of identical greedy token ids (64 tokens) after 64/2048/8192-token prompts |
+| greedy | 0.30 | teacher-forced agreement over 64 steps after 64/2048/8192-token prompts, plus a `generate` smoke test |
 
 Reference points from the CPU-vs-Vulkan llama.cpp comparison on this machine:
 logits cosine 0.9998–0.99997, top-1 agreement 97.8–98.8%, mean KLD
-0.0007–0.0008 nats, greedy 64 tokens 100%.
+0.0007–0.0008 nats. Greedy steps are compared teacher-forced (free-running
+sequences diverge after the first flipped token, so sequence equality is not a
+useful metric at long context).
 
 Representative full-credit thresholds:
 
@@ -41,7 +43,8 @@ Representative full-credit thresholds:
 - top-1 agreement ≥ 95%;
 - mean KL ≤ 0.01 nats;
 - cosine similarity ≥ 0.995;
-- greedy token match ≥ 95%.
+- teacher-forced greedy agreement ≥ 95% (and `generate` must pass its smoke
+  test).
 
 The verifier converts each component into a [0,1] score and reports the suite
 breakdown. **Acceptance requires a correctness score ≥ 0.90.** The exact
@@ -89,7 +92,9 @@ peak/RSS are measured by the verifier on the same GPU.
   safetensors file is rejected.
 - The reference binaries are not present in the grading container; the engine
   may not spawn them or link llama.cpp/ggml.
-- Submission size and linked libraries are checked. No network is available.
+- The submission source must be under 256 MiB (excluding `data/`, `docs/`,
+  `ref/` and Zig build outputs); embedding model weights or generated data is
+  rejected. Linked libraries are checked. No network is available.
 - The engine must be deterministic for a fixed token sequence.
 - Do not modify `data/`, `docs/`, or `ref/`.
 

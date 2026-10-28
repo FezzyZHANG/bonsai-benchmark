@@ -6,7 +6,7 @@ FROM docker.io/library/ubuntu:26.04
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \
         ca-certificates curl xz-utils git less procps ripgrep \
-        python3 python3-venv python3-pip \
+        python3 python3-venv python3-pip libgomp1 \
         libvulkan1 mesa-vulkan-drivers vulkan-tools \
         nodejs npm \
     && rm -rf /var/lib/apt/lists/*

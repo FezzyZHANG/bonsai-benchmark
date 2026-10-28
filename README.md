@@ -23,6 +23,7 @@ is a secondary gate to prevent pre-dequantization.
 | `agent/DEVICE.md` | yes | GPU and Roadmap 2026 compute subset |
 | `agent/MODEL.md` | yes | architecture specification |
 | `agent/TOKENIZER.md` | yes | byte-level BPE / qwen35 specification |
+| `agent/TOKENIZER-VECTORS.json` | yes | visible reference token ids |
 | `agent/examples/` | yes | ABI stub, reference protocol, sample prompts |
 | `deps/docs/` | yes (read-only mount) | Vulkan/SPIR-V/GLSL/GGUF/Zig docs |
 | `deps/data/` | yes (read-only mount) | GGUF, safetensors, sample text |
@@ -63,6 +64,10 @@ sandbox/prepare_run.sh run01
 ANTHROPIC_BASE_URL=https://... ANTHROPIC_AUTH_TOKEN=... sandbox/run_agent.sh run01
 ```
 
+Set `BENCH_MODEL=<model-id>` to pin the model through the proxy (it exports
+`ANTHROPIC_MODEL` and the `ANTHROPIC_DEFAULT_*_MODEL` variables inside the
+container). `RUN_TIMEOUT` bounds the run (default 4 h).
+
 - The run directory is outside this repo (default `/mnt/workspace/bonsai-runs`).
 - The agent container has **no internet route**. It is attached only to the
   internal podman network and can reach only the proxy container. The proxy
@@ -93,18 +98,26 @@ in a GPU container with hidden tests. It reports:
 2. **Performance** — pp (512/2048/4096/8192) and tg (depths 0/512/2048/4096/8192)
    vs the stripped llama.cpp Vulkan reference, geomean speedup.
 3. **VRAM (secondary gate)** — peak process VRAM via `/proc/<pid>/fdinfo`
-   `drm-memory-vram` and `VmHWM`, capped at
-   `max(1.5 × reference, reference + 512 MiB)` and `reference RSS + 2 GiB`.
-   Failing the gate zeroes the performance score.
+   `drm-memory-vram` and `VmHWM`, sampled across the whole run (largest
+   context 16384); the reference is sampled during decode with the same
+   workload. The cap is `max(1.5 × reference, reference + 512 MiB)` for VRAM
+   and `reference RSS + 2 GiB` for host RSS. Failing the gate zeroes the
+   performance score.
+
+Use `--no-container` for host-side debugging and `--library PATH` to grade a
+prebuilt library without rebuilding.
 
 See `agent/ACCEPTANCE.md` for the exact metrics and provisional thresholds.
 
 ## Calibration
 
-`verification/tools/refshim/` implements the ABI on top of llama.cpp. It is
-used to calibrate the harness: the reference shim should score ~1.0
-correctness, ~1.0× performance, and reference VRAM; a stub scores 0. Thresholds
-are adjusted after calibration and pilot runs.
+`verification/tools/refshim/` implements the ABI on top of llama.cpp, built with
+PIC static libs into `verification/bin/libbonsai_ref.so` (hidden; never under
+`deps/`, which the agent can see). `BONSAI_SHIM_BACKEND=cpu|vulkan` selects the
+backend. It is used to calibrate the harness: the shim should score ~1.0
+correctness on CPU (`vulkan` scores like the CPU-vs-Vulkan agreement study),
+~1.0× performance on Vulkan, and reference VRAM; the ABI stub scores 0.
+Thresholds are adjusted after calibration and pilot runs.
 
 ## Operator-only solution outline
 

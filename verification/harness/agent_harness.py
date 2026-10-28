@@ -303,23 +303,43 @@ def suite_positions(eng, golden, golden_dir):
 
 
 def suite_greedy(eng, golden):
+    """Teacher-forced greedy agreement.
+
+    Free-running greedy sequences diverge chaotically after the first flipped
+    token, so a per-step comparison against the reference sequence is used:
+    after forcing the reference prefix, the engine's argmax must equal the next
+    reference token. A short free-running generate() call must also produce the
+    right first token and count, so the generation entry point stays exercised.
+    """
     cases = golden["greedy"]
     total = 0
     same = 0
     details = []
     for c in cases:
+        ids, toks = c["ids"], c["tokens"]
         ctx = eng.ctx(c["n_ctx"])
-        got = eng.generate(ctx, c["tokens"], 64, True)
+        logits = eng.eval(ctx, toks)
+        matched = 0
+        for i, want in enumerate(ids):
+            if int(np.argmax(logits)) == want:
+                matched += 1
+            if i + 1 < len(ids):
+                logits = eng.eval(ctx, [want])
         eng.free_ctx(ctx)
-        n = min(len(got), len(c["ids"]))
-        s = sum(1 for i in range(n) if got[i] == c["ids"][i])
-        # missing tokens count as wrong
-        same += s
-        total += 64
+
+        ctx = eng.ctx(c["n_ctx"])
+        got = eng.generate(ctx, toks, 8, True)
+        eng.free_ctx(ctx)
+        smoke = len(got) == 8 and got[0] == ids[0]
+
+        same += matched
+        total += len(ids)
         details.append({"name": c["name"], "n_ctx": c["n_ctx"],
-                        "matched": s, "generated": len(got),
-                        "lcp": next((i for i in range(n) if got[i] != c["ids"][i]), n)})
-    score = same / total if total else 0.0
+                        "matched": matched, "steps": len(ids),
+                        "generate_ok": smoke, "generate_first": got[:1]})
+    score = (same / total if total else 0.0)
+    if any(not d["generate_ok"] for d in details):
+        score = 0.0
     return score, {"matched": same, "total": total, "cases": details}
 
 
@@ -374,17 +394,36 @@ def main():
 
     mon = Monitor()
     mon.start()
-    eng = Engine(args.library)
     t0 = time.perf_counter()
-    eng.open(args.model)
-    load_s = time.perf_counter() - t0
-    result = {
-        "abi_version": eng.lib.bonsai_abi_version(),
-        "n_vocab": eng.n_vocab(),
-        "n_ctx_train": eng.n_ctx_train(),
-        "tensor_count": eng.tensor_count(),
-        "model_load_s": load_s,
-    }
+    result = {"abi_version": None, "n_vocab": None, "n_ctx_train": None,
+              "tensor_count": None, "model_load_s": None}
+
+    def finish():
+        mon.stop()
+        result["vram_peak_bytes"] = mon.peak
+        result["host_peak_rss_bytes"] = _vm_hwm()
+        result["wall_s"] = time.perf_counter() - t0
+        with open(args.out, "w") as f:
+            json.dump(result, f, indent=1)
+        print(json.dumps({k: result.get(k) for k in
+                          ("correctness", "vram_peak_bytes", "host_peak_rss_bytes")},
+                         indent=1))
+
+    try:
+        eng = Engine(args.library)
+        result["abi_version"] = eng.lib.bonsai_abi_version()
+        eng.open(args.model)
+        result["model_load_s"] = time.perf_counter() - t0
+        result["n_vocab"] = eng.n_vocab()
+        result["n_ctx_train"] = eng.n_ctx_train()
+        result["tensor_count"] = eng.tensor_count()
+    except Exception as e:  # noqa: BLE001
+        # A library that cannot even load/open the model scores zero; report it
+        # instead of aborting the verifier.
+        result["correctness"] = {"score": 0.0, "suites": {},
+                                 "details": {"error": repr(e)}, "accepted": False}
+        finish()
+        return
 
     scores = {}
     details = {}
@@ -413,13 +452,7 @@ def main():
         result["perf"] = run_perf(eng, golden["corpus_tokens"])
 
     eng.close()
-    mon.stop()
-    result["vram_peak_bytes"] = mon.peak
-    result["host_peak_rss_bytes"] = _vm_hwm()
-    result["wall_s"] = time.perf_counter() - t0
-    with open(args.out, "w") as f:
-        json.dump(result, f, indent=1)
-    print(json.dumps({k: result[k] for k in ("correctness", "vram_peak_bytes", "host_peak_rss_bytes")}, indent=1))
+    finish()
 
 
 if __name__ == "__main__":

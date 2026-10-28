@@ -88,9 +88,10 @@ The merges are the usual `"left right"` strings, e.g. `Ġ Ġ` or `i n`. There ar
 ## 5. Validation
 
 `ref/bin/bonsai-ref` and `llama-cli` use the same tokenizer; use them to obtain
-reference ids for arbitrary strings. `data/samples/` contains a few visible
-sample texts; hidden tests use different strings, including Unicode, combining
-marks, code, whitespace and special tokens.
+reference ids for arbitrary strings. `TOKENIZER-VECTORS.json` in this directory
+lists reference ids (with and without BOS) for 15 visible strings. `data/samples/`
+contains a few visible sample texts; hidden tests use different strings,
+including Unicode, combining marks, code, whitespace and special tokens.
 
 The tokenizer is part of the correctness score (exact token ids). The dequant,
 forward-pass and generation suites use token ids supplied by the harness, so a

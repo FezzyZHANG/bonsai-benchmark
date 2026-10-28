@@ -43,7 +43,8 @@ Everything is offline. Available tools and data:
   it has no PTQ1_0 dequantizer and no runtime tokenizer.
 - **Data**: `data/Ternary-Bonsai-2-4B-PTQ1_0.gguf` (the model),
   `data/Ternary-Bonsai-2-4B-PTQ1_0-f16.safetensors` (dequantized weights),
-  and `data/samples/` (sample prompts/corpus).
+  and `data/samples/` (sample prompts/corpus). `TOKENIZER-VECTORS.json` gives
+  reference token ids for visible strings.
 - **Reference**: `ref/bin/{llama-cli,llama-debug,llama-perplexity,bonsai-ref}`
   are stripped llama.cpp builds (CPU and Vulkan backends, `-ngl 0` / `-ngl 99`).
   `ref/PROTOCOL.md` describes `bonsai-ref`.

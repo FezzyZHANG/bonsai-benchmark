@@ -66,7 +66,7 @@ podman run -d --name "$PNAME" \
   -e ALLOWED_PATHS="${ALLOWED_PATHS:-/v1/messages,/v1/messages/count_tokens,/v1/models}" \
   -e ALLOWED_METHODS="${ALLOWED_METHODS:-POST,GET}" \
   -e AUTH_HEADER="${AUTH_HEADER:-authorization}" \
-  -e MAX_REQUESTS="${MAX_REQUESTS:-2000}" \
+  -e MAX_REQUESTS="${MAX_REQUESTS:-10000}" \
   -e LOG_BODIES="${LOG_BODIES:-0}" \
   -v "$BENCH/sandbox/proxy:/proxy:ro" \
   "$PROXY_IMAGE" >/dev/null

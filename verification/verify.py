@@ -32,6 +32,24 @@ def run(cmd, **kw):
     return subprocess.run(cmd, **kw)
 
 
+MAX_SUBMISSION_BYTES = 256 * 2**20
+
+
+def submission_size(sub):
+    """Bytes of regular files, ignoring build outputs and the mounted trees."""
+    skip = {".git", "zig-out", ".zig-cache", "zig-cache", "node_modules",
+            ".claude", "data", "docs", "ref"}
+    total = 0
+    for root, dirs, files in os.walk(sub):
+        dirs[:] = [d for d in dirs if d not in skip]
+        for name in files:
+            try:
+                total += os.path.getsize(os.path.join(root, name))
+            except OSError:
+                pass
+    return total
+
+
 def build_submission(sub, work, no_container):
     src = os.path.join(work, "src")
     shutil.copytree(sub, src, ignore=shutil.ignore_patterns(
@@ -74,10 +92,11 @@ def run_harness(lib, out_json, no_container, skip_perf):
             cmd.append("--skip-perf")
         r = run(cmd, timeout=7200)
     else:
-        cache = os.path.dirname(lib)
         cmd = ["podman", "run", "--rm", "--device", "/dev/dri", "--group-add", "keep-groups",
-               "--security-opt", "label=disable", "--network=none",
-               "-v", f"{lib}:/libbonsai.so:ro",
+               "--security-opt", "label=disable", "--network=none"]
+        if os.environ.get("BONSAI_SHIM_BACKEND"):
+            cmd += ["-e", "BONSAI_SHIM_BACKEND=" + os.environ["BONSAI_SHIM_BACKEND"]]
+        cmd += ["-v", f"{lib}:/libbonsai.so:ro",
                "-v", f"{MODEL}:/model.gguf:ro",
                "-v", f"{os.path.dirname(GOLDEN)}:/golden:ro",
                "-v", f"{HERE}/harness:/harness:ro",
@@ -235,6 +254,17 @@ def main():
     out = os.path.abspath(args.out or sub + "-report")
     work = tempfile.mkdtemp(prefix="bonsai-verify-")
     rep = {"submission": sub, "started": time.strftime("%Y-%m-%d %H:%M:%S")}
+
+    size = submission_size(sub)
+    rep["submission_bytes"] = size
+    if size > MAX_SUBMISSION_BYTES:
+        rep["build_ok"] = False
+        rep["build_log"] = (f"submission is {size} bytes, over the "
+                            f"{MAX_SUBMISSION_BYTES}-byte source limit; embedding "
+                            f"model weights or generated data is not allowed")
+        write_report(rep, out)
+        log(f"submission too large; report in {out}")
+        return 1
 
     ensure_golden()
     if args.library:
