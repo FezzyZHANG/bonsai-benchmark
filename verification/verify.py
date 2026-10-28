@@ -5,6 +5,7 @@ import json
 import math
 import os
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
@@ -40,7 +41,9 @@ def submission_size(sub):
     skip = {".git", "zig-out", ".zig-cache", "zig-cache", "node_modules",
             ".claude", ".claude-home", ".tmp", "data", "docs", "ref"}
     total = 0
-    for root, dirs, files in os.walk(sub):
+    # Symlinked directories are not followed: build_submission copies symlinks
+    # as symlinks, so the size check and the copied tree stay consistent.
+    for root, dirs, files in os.walk(sub, followlinks=False):
         dirs[:] = [d for d in dirs if d not in skip]
         for name in files:
             if name == ".claude.json":
@@ -54,23 +57,51 @@ def submission_size(sub):
 
 def build_submission(sub, work, no_container):
     src = os.path.join(work, "src")
-    shutil.copytree(sub, src, ignore=shutil.ignore_patterns(
+    ignored = shutil.ignore_patterns(
         ".git", "zig-out", ".zig-cache", "zig-cache", "node_modules",
         ".claude", ".claude-home", ".claude.json", ".tmp",
-        "data", "docs", "ref"))
+        "data", "docs", "ref")
+
+    def ignore(dirname, names):
+        out = set(ignored(dirname, names))
+        for name in names:
+            if name in out:
+                continue
+            try:
+                mode = os.lstat(os.path.join(dirname, name)).st_mode
+            except OSError:
+                out.add(name)
+                continue
+            # Sockets/FIFOs/device nodes are not safe for copytree/copyfile.
+            if not (stat.S_ISREG(mode) or stat.S_ISDIR(mode) or stat.S_ISLNK(mode)):
+                out.add(name)
+        return out
+
+    # Copy symlinks as symlinks: a directory symlink must not pull an excluded
+    # tree (or a weight file) into the build, and submission_size ignores it.
+    shutil.copytree(sub, src, symlinks=True, ignore=ignore)
     if no_container:
         zig = os.environ.get("ZIG", os.path.join(BENCH, "deps/toolchains/zig-x86_64-linux-0.17.0/zig"))
         env = dict(os.environ, ZIG_GLOBAL_CACHE_DIR=os.path.join(work, "zig-cache"))
-        r = run([zig, "build", "-Doptimize=ReleaseFast"], cwd=src, env=env,
-                capture_output=True, text=True, timeout=3600)
+        try:
+            r = run([zig, "build", "-Doptimize=ReleaseFast"], cwd=src, env=env,
+                    capture_output=True, text=True, timeout=3600)
+        except subprocess.TimeoutExpired:
+            return None, "build timed out after 3600 s"
     else:
+        name = f"bonsai-build-{os.getpid()}"
         cache = os.path.join(work, "zig-cache")
         os.makedirs(cache, exist_ok=True)
-        r = run(["podman", "run", "--rm", "--network=none",
-                 "-v", f"{src}:/src", "-v", f"{cache}:/cache", "-w", "/src",
-                 "-e", "ZIG_GLOBAL_CACHE_DIR=/cache",
-                 AGENT_IMAGE, "zig", "build", "-Doptimize=ReleaseFast"],
-                capture_output=True, text=True, timeout=3600)
+        try:
+            r = run(["podman", "run", "--rm", "--name", name,
+                     "--network=none", "--security-opt", "label=disable",
+                     "-v", f"{src}:/src", "-v", f"{cache}:/cache", "-w", "/src",
+                     "-e", "ZIG_GLOBAL_CACHE_DIR=/cache",
+                     AGENT_IMAGE, "zig", "build", "-Doptimize=ReleaseFast"],
+                    capture_output=True, text=True, timeout=3600)
+        except subprocess.TimeoutExpired:
+            run(["podman", "rm", "-f", name], capture_output=True)
+            return None, "build timed out after 3600 s"
     lib = os.path.join(src, "zig-out/lib/libbonsai.so")
     ok = r.returncode == 0 and os.path.exists(lib)
     return lib if ok else None, (r.stdout + r.stderr)[-5000:]
@@ -81,10 +112,13 @@ def ensure_golden():
         return
     log("golden data missing; generating with CPU oracle (this takes a few minutes)")
     os.makedirs(os.path.dirname(GOLDEN), exist_ok=True)
-    r = run([PY, os.path.join(HERE, "tools/generate_golden.py"),
-             "--model", MODEL, "--oracle", ORACLE_CPU, "--safetensors", ST,
-             "--tests", os.path.join(HERE, "tests"), "--out", os.path.dirname(GOLDEN)],
-            timeout=3600)
+    try:
+        r = run([PY, os.path.join(HERE, "tools/generate_golden.py"),
+                 "--model", MODEL, "--oracle", ORACLE_CPU, "--safetensors", ST,
+                 "--tests", os.path.join(HERE, "tests"), "--out", os.path.dirname(GOLDEN)],
+                timeout=3600)
+    except subprocess.TimeoutExpired:
+        raise SystemExit("golden generation timed out after 3600 s")
     if r.returncode != 0:
         raise SystemExit("golden generation failed")
 
@@ -95,9 +129,10 @@ def run_harness(lib, out_json, no_container, skip_perf):
                "--library", lib, "--model", MODEL, "--golden", GOLDEN, "--out", out_json]
         if skip_perf:
             cmd.append("--skip-perf")
-        r = run(cmd, timeout=7200)
     else:
-        cmd = ["podman", "run", "--rm", "--device", "/dev/dri", "--group-add", "keep-groups",
+        name = f"bonsai-harness-{os.getpid()}"
+        cmd = ["podman", "run", "--rm", "--name", name,
+               "--device", "/dev/dri", "--group-add", "keep-groups",
                "--security-opt", "label=disable", "--network=none"]
         if os.environ.get("BONSAI_SHIM_BACKEND"):
             cmd += ["-e", "BONSAI_SHIM_BACKEND=" + os.environ["BONSAI_SHIM_BACKEND"]]
@@ -111,7 +146,12 @@ def run_harness(lib, out_json, no_container, skip_perf):
                "--golden", "/golden/manifest.json", "--out", f"/out/{os.path.basename(out_json)}"]
         if skip_perf:
             cmd.append("--skip-perf")
+    try:
         r = run(cmd, timeout=7200)
+    except subprocess.TimeoutExpired:
+        if not no_container:
+            run(["podman", "rm", "-f", name], capture_output=True)
+        raise SystemExit("harness timed out after 7200 s")
     if r.returncode != 0:
         raise SystemExit(f"harness failed (exit {r.returncode})")
 
@@ -307,7 +347,14 @@ def main():
         rep["perf"] = {"rows": {}, "speedup_geomean": 0.0,
                        "error": res.get("perf_error", "perf run failed")}
     if not args.skip_perf and "perf" in res:
-        ref = measure_reference(args.no_container)
+        try:
+            ref = measure_reference(args.no_container)
+        except Exception as e:  # noqa: BLE001
+            rep["perf"] = {"rows": {}, "speedup_geomean": 0.0,
+                           "error": f"reference measurement failed: {e!r}"}
+            write_report(rep, out)
+            log(f"reference measurement failed; report in {out}")
+            return 1
         rows = {}
         for kind in ("pp", "tg"):
             for k, av in res.get("perf", {}).get(kind, {}).items():

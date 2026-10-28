@@ -122,6 +122,8 @@ class Engine:
         return arr.reshape(shape)
 
     def ctx(self, n_ctx, n_batch=512):
+        # n_batch is a hint; the perf tg @ d0 context is 257, below 512.
+        n_batch = min(n_batch, n_ctx)
         c = ctypes.c_void_p()
         if self.lib.bonsai_context_create(self.model, n_ctx, n_batch, ctypes.byref(c)) != 0:
             self.err("context_create")

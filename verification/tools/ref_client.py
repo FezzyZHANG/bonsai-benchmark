@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Driver for the hidden bonsai-ref line protocol."""
 import os
+import select
 import subprocess
 
 
@@ -9,7 +10,8 @@ class RefError(RuntimeError):
 
 
 class RefClient:
-    def __init__(self, binary, stderr_path=None):
+    def __init__(self, binary, stderr_path=None, timeout=3600):
+        self.timeout = timeout
         self.stderr = open(stderr_path, "w") if stderr_path else subprocess.DEVNULL
         self.p = subprocess.Popen(
             [binary],
@@ -25,6 +27,9 @@ class RefClient:
             raise RefError("runner is closed")
         self.p.stdin.write(line + "\n")
         self.p.stdin.flush()
+        ready, _, _ = select.select([self.p.stdout], [], [], self.timeout)
+        if not ready:
+            raise RefError(f"runner timed out after {self.timeout}s: {line[:120]}")
         reply = self.p.stdout.readline()
         if not reply:
             raise RefError(f"runner died while handling: {line[:120]}")

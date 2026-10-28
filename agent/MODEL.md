@@ -117,15 +117,17 @@ The sign offset for a width is the cumulative offset in
 ### Folded weights
 
 For every weight in `weight_names`, the stored matrix is in the latent basis.
-The engine must transform the **activation** before the matmul:
+The reference transforms the **activation** before the matmul (this is the
+order the oracle uses):
 
 ```
 x' = H_block(s_w * x)        # H applied after sign multiplication
 y  = W_latent @ x'           # W_latent is the GGUF/safetensors tensor
 ```
 
-where `w = W.ne[0]` (the input width) selects `s_w`. Do not invert/rotate the
-weight matrix on the host or at load time.
+where `w = W.ne[0]` (the input width) selects `s_w`. Rotating the latent weight
+once at load time is mathematically equivalent and is allowed; either form must
+match the oracle within the acceptance tolerance.
 
 Special case: `ssm_out.weight` and `gdn_v_grouped`. The GDN output features
 (4096 = 128 × 32 v heads) are in tiled order. Before the sign and Hadamard

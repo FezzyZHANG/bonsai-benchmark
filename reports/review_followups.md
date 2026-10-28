@@ -1,8 +1,8 @@
 # Review follow-ups (post-final-check)
 
 Review date: 2026-10-27. This file records the issues from the final
-pre-run review that were **not** fixed in the same pass. The four fixed items
-are listed at the end for context.
+pre-run review that remain open. The items fixed so far are listed at the end
+for context.
 
 ## Correctness impact
 
@@ -15,10 +15,10 @@ The remaining items can still affect a run in these ways:
 
 - **Benchmark validity** if the agent cheats or uses the proxy as a network /
   model escape (golden exposure, proxy body, link/Vulkan checks).
-- **Whether a run completes** (verifier timeout handling, SELinux build label,
-  setup PyYAML on a fresh machine, resource limits).
-- **Performance only** (`n_batch` edge at `n_ctx=257`; perf measured on a
-  failed-correctness submission).
+- **Whether a run completes** (resource limits, smoke-test coverage, and the
+  portability items below).
+- **Performance only** (perf measured on a failed-correctness submission, and
+  reference/container comparability).
 - **Acceptance semantics** for a non-compliant submission (VRAM gate is only a
   perf zero, not an `accepted=false`).
 - **Tiny numeric/doc mismatches** (L2-norm eps form) that are far inside the
@@ -53,12 +53,6 @@ The remaining items can still affect a run in these ways:
   nested `claude --dangerously-skip-permissions` with `IS_SANDBOX=1` is
   possible. Mitigation: parse the body and reject server-side tool types,
   optionally pin/rewrite the model, and document the nested-session risk.
-- [ ] **Source-size cap is bypassable with a directory symlink.**
-  `submission_size` uses `os.walk` (does not follow directory symlinks), while
-  `build_submission`'s `shutil.copytree` follows them. A symlink to `data/` can
-  copy weights into the build uncounted. The VRAM gate still blocks
-  pre-dequantization, but the size check is not a hard boundary. Use
-  `symlinks=True` or realpath checks.
 - [ ] **Proxy method/path allowlist is a cross-product.**
   `sandbox/proxy/anthropic-proxy.ts` checks `allowedMethods.has(method)` and
   `allowedPaths.has(path)` independently, so `GET /v1/messages` and
@@ -71,19 +65,6 @@ The remaining items can still affect a run in these ways:
 
 ## B. Operational robustness
 
-- [ ] **Verifier timeout failures are uncaught.** `subprocess.run(timeout=...)`
-  in `build_submission`/`run_harness` can raise `TimeoutExpired`;
-  `measure_reference` and `RefClient` have no timeout. A hung engine/oracle
-  crashes the verifier without a report. Catch and report these, and give
-  `RefClient` a timeout.
-- [ ] **Build container lacks `--security-opt label=disable`.**
-  `verify.py:build_submission` does not pass it while `run_harness` and
-  `sandbox/run_agent.sh` do; on an SELinux host the build bind mounts may fail.
-- [ ] **`setup.sh` fallback is missing PyYAML.** `deps/python` installs only
-  `numpy safetensors`, but `verification/tools/gguf_to_safetensors.py` imports
-  `gguf`, which imports `yaml`. A fresh setup without the investigation-tree
-  safetensors fails in the fallback. Add `pyyaml` (and consider `tqdm` and
-  `requests` from the gguf-py dependency list).
 - [ ] **No container resource limits.** Neither the agent nor the grading
   container sets `--memory`, `--cpus` or `--pids-limit`. Consider limits or
   document that the machine is dedicated.
@@ -116,22 +97,12 @@ The remaining items can still affect a run in these ways:
   performance is measured only after correctness acceptance; `verify.py` still
   runs the perf suites and reports a geomean. Zero or skip it for a rejected
   submission if that is the intent.
-- [ ] **Perf edge: `n_batch` hint.** `agent_harness.py:Engine.ctx` passes
-  `n_batch=512` even for the `tg @ d0` context of `n_ctx=257`. An engine that
-  asserts `n_batch <= n_ctx` fails the perf run (correctness suites are all
-  `n_ctx >= 512`, so this is perf-only). Pass `min(512, n_ctx)`.
-
 ## D. Prompting / documentation nits
 
 - [ ] **`MODEL.md` L2-norm form.** The doc says
   `q / sqrt(sum(q^2) + eps)`; ggml uses `q / max(sqrt(sum(q^2)), eps)`. The
   difference is negligible for these norms and far inside tolerance, but align
   the doc with the oracle.
-- [ ] **`MODEL.md` "Do not invert/rotate the weight matrix ... at load time."**
-  Rotating weights at load is a valid, likely faster alternative to the
-  reference's per-token activation fold and is not forbidden by acceptance.
-  Remove the prohibition or state that both are acceptable and the reference
-  uses activation-side.
 - [ ] **README "pin the model through the proxy".** The proxy does not enforce
   `BENCH_MODEL`; `run_agent.sh` only exports Claude Code's model env. Say
   "sets Claude Code's model" unless proxy enforcement is added.
@@ -158,3 +129,20 @@ The remaining items can still affect a run in these ways:
   this model because `tokenizer.ggml.add_bos_token=false`; the reference and
   `TOKENIZER-VECTORS.json`'s `ids_add_bos` agree with `ids`. (The harness never
   tests `add_bos`; this was documentation-only.)
+- [x] `verification/harness/agent_harness.py`: clamp `n_batch` to `n_ctx`
+  (`Engine.ctx`), so the `tg @ d0` perf context (257) no longer passes a 512
+  hint.
+- [x] `agent/MODEL.md`: the reference uses the activation-side fold; rotating
+  the latent weights once at load is explicitly allowed as an equivalent
+  implementation.
+- [x] `verification/verify.py`, `verification/tools/ref_client.py`: catch
+  build/harness/golden-generation timeouts and reference-measurement failures;
+  give `RefClient` a per-command timeout and clean up a timed-out build/harness
+  container by name.
+- [x] `verification/verify.py`: pass `--security-opt label=disable` to the
+  build container, matching the harness and agent containers.
+- [x] `setup.sh`: install PyYAML in `deps/python` (the gguf-py reader imports
+  it), in both the venv and uv fallback paths.
+- [x] `verification/verify.py`: copy symlinks as symlinks and skip
+  sockets/FIFOs/devices, so a directory symlink cannot pull an excluded tree or
+  a weight file into the build and the size check and copied tree agree.

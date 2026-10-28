@@ -88,13 +88,13 @@ fi
 if [ ! -x deps/python/bin/python ]; then
   log "create deps/python"
   if python3 -m venv deps/python 2>/dev/null; then
-    deps/python/bin/pip install --no-cache-dir numpy safetensors
+    deps/python/bin/pip install --no-cache-dir numpy safetensors pyyaml
   else
     # Some distros ship venv without ensurepip; fall back to uv.
     command -v uv >/dev/null || { echo "venv failed and uv is missing" >&2; exit 1; }
     rm -rf deps/python
     uv venv deps/python
-    uv pip install --python deps/python/bin/python numpy safetensors
+    uv pip install --python deps/python/bin/python numpy safetensors pyyaml
   fi
 fi
 
