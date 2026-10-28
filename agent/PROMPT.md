@@ -31,6 +31,9 @@ within it:
    outside the workspace; use the environment already provided.
 3. If a safe command is still denied, write the commands into a script in the
    workspace and run the script (for example `bash tools/check.sh`).
+4. Tool results over ~30 KB are truncated and the full output is stored outside
+   the workspace, where you cannot read it. Redirect large output to a file in
+   the workspace (for example `cmd > out.txt`) and read that file.
 
 The podman container is the security boundary. These are usability workarounds,
 not a way to reach the network or files outside the workspace.

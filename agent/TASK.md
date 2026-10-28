@@ -42,9 +42,11 @@ Everything is offline. Available tools and data:
   this Zig version; `zig translate-c` is.
 - **Vulkan SDK 1.4.363.0**: headers, loader, `glslc`, `glslangValidator`,
   `slangc`, `spirv-*`, `vulkaninfo`, validation layers, `vkprofiles`.
-- **Python** with `numpy`, `safetensors`, and the fork's `gguf-py` reader.
-  `gguf-py` can parse this GGUF and expose the raw tensor bytes and metadata;
-  it has no PTQ1_0 dequantizer and no runtime tokenizer.
+- **Python** with `numpy`, `safetensors`, and the fork's `gguf-py` reader. It is
+  importable as `import gguf` from the default `python`; `PYTHONPATH` is preset
+  (`python -I` ignores it and will not find the module). `gguf-py` can parse
+  this GGUF and expose the raw tensor bytes and metadata; it has no PTQ1_0
+  dequantizer and no runtime tokenizer.
 - **Data**: `data/Ternary-Bonsai-2-4B-PTQ1_0.gguf` (the model),
   `data/Ternary-Bonsai-2-4B-PTQ1_0-f16.safetensors` (dequantized weights),
   and `data/samples/` (sample prompts/corpus). `TOKENIZER-VECTORS.json` gives
