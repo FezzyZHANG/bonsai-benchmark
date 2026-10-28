@@ -12,6 +12,7 @@ NAME="${1:-smoke-$(date +%s)}"
 ROOT="${RUNS_ROOT:-/mnt/workspace/bonsai-runs}"
 EGRESS_NET="${EGRESS_NET:-bonsai-egress}"
 MOCK_IP="${MOCK_IP:-10.90.0.4}"
+MOCK_PORT="${MOCK_PORT:-8000}"
 MOCK_NAME="bonsai-mock-$NAME"
 AGENT_IMAGE="${AGENT_IMAGE:-bonsai-agent:1.0}"
 
@@ -31,7 +32,8 @@ trap cleanup EXIT
 
 podman run -d --name "$MOCK_NAME" --network "$EGRESS_NET:ip=$MOCK_IP" \
   -v "$BENCH/sandbox/mock_anthropic.py:/mock.py:ro" -e PYTHONUNBUFFERED=1 \
-  "$AGENT_IMAGE" python3 -I /mock.py 8000 >/dev/null
+  -e "MOCK_IP=$MOCK_IP" -e "MOCK_PORT=$MOCK_PORT" \
+  "$AGENT_IMAGE" python3 -I /mock.py "$MOCK_PORT" >/dev/null
 
 "$BENCH/sandbox/prepare_run.sh" "$NAME" "$ROOT"
 ANTHROPIC_BASE_URL="http://$MOCK_IP:8000" ANTHROPIC_AUTH_TOKEN=mock-upstream-secret \
@@ -65,12 +67,46 @@ def check(name, cond):
     global ok
     print(("PASS " if cond else "FAIL ") + name)
     ok = ok and cond
-check("tool sequence", tools[:4] == ["Bash", "Write", "Read", "WebFetch"])
-check("GPU visible", any("Radeon" in r[1] and "radv" in r[1] for r in results))
-check("Write/Read allowed", any("written-by-mock" in r[1] for r in results) and
-      any("File created successfully" in r[1] for r in results))
+check("tool coverage", {"Bash", "Write", "Read", "WebFetch", "WebSearch"} <= set(tools))
+bash_results = [r for name, r in zip(tools, results) if name == "Bash"]
+write_results = [r for name, r in zip(tools, results) if name == "Write"]
+read_results = [r for name, r in zip(tools, results) if name == "Read"]
+
+
+def res(items, i):
+    return items[i] if len(items) > i else (True, "")
+
+
+check("GPU visible", "Radeon" in res(bash_results, 5)[1] and
+      "radv" in res(bash_results, 5)[1])
+check("Write/Read allowed", len(write_results) >= 7 and
+      all(not r[0] for r in write_results[:7]) and
+      read_results and not read_results[0][0] and
+      "written-by-mock" in read_results[0][1])
 check("WebFetch denied", any(r[0] and "WebFetch" in r[1] for r in results))
+check("WebSearch denied", any(r[0] and "WebSearch" in r[1] for r in results))
 check("final text", any("DONE mock" in t for t in texts))
+check("toolchain", all([
+    not res(bash_results, 0)[0], "0.17.0" in res(bash_results, 0)[1],
+    not res(bash_results, 1)[0], "shaderc" in res(bash_results, 1)[1].lower(),
+    not res(bash_results, 2)[0], "glslang" in res(bash_results, 2)[1].lower(),
+    not res(bash_results, 3)[0], "slang" in res(bash_results, 3)[1].lower(),
+    not res(bash_results, 4)[0], "spirv" in res(bash_results, 4)[1].lower(),
+    not res(bash_results, 6)[0],      # glslc smoke.comp -o smoke.spv
+    not res(bash_results, 7)[0],      # spirv-val smoke.spv
+    "py-ok" in res(bash_results, 8)[1],  # python script
+    "arch=qwen35" in res(bash_results, 9)[1],
+    not res(bash_results, 11)[0],     # zig build
+]))
+check("no egress", not res(bash_results, 12)[0] and
+      "egress-blocked" in res(bash_results, 12)[1] and
+      "egress-blocked-egress-net" in res(bash_results, 12)[1] and
+      "egress-OPEN" not in res(bash_results, 12)[1])
+check("data/docs/ref read-only", len(write_results) >= 10 and
+      all(r[0] for r in write_results[7:10]))
+check("credential isolation",
+      "benchmark-dummy-token" in res(bash_results, 10)[1] and
+      "mock-upstream-secret" not in res(bash_results, 10)[1])
 sys.exit(0 if ok else 1)
 PY
 echo "mock requests:"

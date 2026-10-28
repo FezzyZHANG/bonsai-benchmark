@@ -18,5 +18,20 @@ You have a wall-clock budget: run `time-left` to see the remaining time and
 read the time-budget section of `TASK.md`. Only the workspace at the deadline is
 graded, so save your work continuously.
 
+## Bash in this sandbox
+
+Claude Code's Bash command classifier sometimes denies safe commands. Work
+within it:
+
+1. Keep commands simple: split `&&`, `;`, pipelines, loops and heredocs into
+   separate Bash calls.
+2. Do not set environment variables in Bash commands, especially to paths
+   outside the workspace; use the environment already provided.
+3. If a safe command is still denied, write the commands into a script in the
+   workspace and run the script (for example `bash tools/check.sh`).
+
+The podman container is the security boundary. These are usability workarounds,
+not a way to reach the network or files outside the workspace.
+
 Work autonomously until the engine is complete. Leave `NOTES.md` describing your
 design, known limitations and test results.

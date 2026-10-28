@@ -85,6 +85,12 @@ container). `RUN_TIMEOUT` bounds the run (default 2 h).
   and would work through the proxy. Bypass mode is deliberately not used (it is
   refused as root without `IS_SANDBOX=1`, and it would drop the deny rules).
   The allowlist covers the workflow; `sandbox/smoke_test.sh` checks it.
+- Claude Code's Bash command classifier can falsely deny safe compound
+  commands. The agent prompt tells it to split commands, avoid environment
+  variables pointing outside the workspace, and use a workspace script if a
+  command is still denied. The script workaround can bypass some classifier
+  checks; it is accepted under the well-behaved-agent assumption (see
+  `reports/review_followups.md`).
 - GPU: `--device /dev/dri --group-add keep-groups`; the image carries Mesa
   RADV. Use the host's `render` group/ACL as in the investigation.
 - The transcript is `RUNS_ROOT/RUN_NAME.transcript.jsonl`; proxy JSONL is
@@ -96,9 +102,11 @@ container). `RUN_TIMEOUT` bounds the run (default 2 h).
   continuously. The CPU and Vulkan reference binaries are both available;
   expected speeds are documented in `TASK.md`.
 - `sandbox/smoke_test.sh [NAME]` validates the whole sandbox against a local
-  mock Messages API (`sandbox/mock_anthropic.py`): tool use, GPU access,
-  workspace writes and the WebFetch denial, without spending real API calls or
-  exposing a credential.
+  mock Messages API (`sandbox/mock_anthropic.py`): individual simple Bash
+  commands and the script workaround, GPU access, workspace writes,
+  `data/docs/ref` read-only, WebFetch/WebSearch denial, credential isolation,
+  no egress, and the toolchain, without spending real API calls or exposing a
+  credential.
 
 ### Model and cost tuning
 
@@ -200,9 +208,10 @@ The benchmark is implemented and calibrated end to end:
   (Vulkan, grading container) and 0.9952 (CPU);
 - the Vulkan shim measures 1.004× the reference geomean (grading path), and its peak VRAM is
   1978.8 MiB against a 2950.6 MiB gate (RSS 1333 MiB vs 4089 MiB);
-- the agent sandbox was validated against a mock Messages API (tool use, GPU
-  access, workspace writes, WebFetch denial, credential isolation, no egress),
-  with a documented 2-hour wall-clock budget.
+- the agent sandbox was validated against a mock Messages API (individual Bash
+  commands and the script workaround, GPU access, workspace writes,
+  `data/docs/ref` read-only, WebFetch/WebSearch denial, credential isolation,
+  no egress, toolchain), with a documented 2-hour wall-clock budget.
 
 See `reports/calibration.md` for the numbers and `reports/roadmap2026_support.md`
 for the Roadmap 2026 device check. Open review follow-ups that do not block an

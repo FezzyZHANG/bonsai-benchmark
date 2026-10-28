@@ -1,20 +1,101 @@
 #!/usr/bin/env python3
 """Minimal Anthropic Messages API mock for sandbox plumbing tests.
 
-Turn sequence (keyed by the number of tool_result blocks in the request):
-Bash -> Write -> Read -> WebFetch (expected denied) -> final text.
+Each step is a separate tool call. The Bash steps are deliberately simple:
+Claude Code's command classifier can deny safe compound commands, so this
+smoke test issues individual commands instead of one script.
 """
 import json
+import os
 import sys
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-BASH_CMD = "echo mock-tool-ok && vulkaninfo --summary 2>/dev/null | grep -E 'deviceName|driverName'"
+MOCK_IP = os.environ.get("MOCK_IP", "10.90.0.4")
+MOCK_PORT = os.environ.get("MOCK_PORT", "8000")
+
+SMOKE_COMP = """#version 450
+layout(local_size_x = 1) in;
+void main() {}
+"""
+
+SMOKE_REF_IN = """load /workspace/data/Ternary-Bonsai-2-4B-PTQ1_0.gguf
+info
+tokenize 48656c6c6f 0
+quit
+"""
+
+SMOKE_NET = f"""#!/bin/bash
+if curl -m 3 -sS -o /dev/null https://example.com 2>/dev/null; then
+  echo egress-OPEN
+else
+  echo egress-blocked
+fi
+if curl -m 3 -sS -o /dev/null http://{MOCK_IP}:{MOCK_PORT}/ 2>/dev/null; then
+  echo egress-OPEN-egress-net
+else
+  echo egress-blocked-egress-net
+fi
+"""
+
+SMOKE_PY = """#!/bin/bash
+python3 -c "import gguf, numpy, safetensors; print('py-ok')"
+"""
+
+BUILD_ZIG = """const std = @import("std");
+
+pub fn build(b: *std.Build) void {
+    const target = b.standardTargetOptions(.{});
+    const optimize = b.standardOptimizeOption(.{});
+
+    const lib = b.addLibrary(.{
+        .name = "bonsai",
+        .linkage = .dynamic,
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/main.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
+    });
+    b.installArtifact(lib);
+}
+"""
+
+MAIN_ZIG = """export fn bonsai_abi_version() callconv(.c) u32 {
+    return 1;
+}
+
+export fn bonsai_last_error() callconv(.c) ?[*:0]const u8 {
+    return null;
+}
+"""
 
 STEPS = [
-    ("Bash", {"command": BASH_CMD}),
+    ("Write", {"file_path": "/workspace/smoke.comp", "content": SMOKE_COMP}),
+    ("Write", {"file_path": "/workspace/smoke-ref.in", "content": SMOKE_REF_IN}),
+    ("Write", {"file_path": "/workspace/build.zig", "content": BUILD_ZIG}),
+    ("Write", {"file_path": "/workspace/src/main.zig", "content": MAIN_ZIG}),
     ("Write", {"file_path": "/workspace/mock-perm.txt", "content": "written-by-mock\n"}),
+    ("Write", {"file_path": "/workspace/smoke-net.sh", "content": SMOKE_NET}),
+    ("Write", {"file_path": "/workspace/smoke-py.sh", "content": SMOKE_PY}),
+    ("Bash", {"command": "zig version"}),
+    ("Bash", {"command": "glslc --version"}),
+    ("Bash", {"command": "glslangValidator --version"}),
+    ("Bash", {"command": "command -v slangc"}),
+    ("Bash", {"command": "spirv-val --version"}),
+    ("Bash", {"command": "vulkaninfo --summary"}),
+    ("Bash", {"command": "glslc smoke.comp -o smoke.spv"}),
+    ("Bash", {"command": "spirv-val smoke.spv"}),
+    ("Bash", {"command": "bash smoke-py.sh"}),
+    ("Bash", {"command": "./ref/bin/bonsai-ref-cpu < smoke-ref.in 2>/dev/null"}),
+    ("Bash", {"command": "printenv ANTHROPIC_AUTH_TOKEN"}),
+    ("Bash", {"command": "zig build -Doptimize=ReleaseFast"}),
+    ("Bash", {"command": "bash smoke-net.sh"}),
     ("Read", {"file_path": "/workspace/mock-perm.txt"}),
+    ("Write", {"file_path": "/workspace/data/.smoke", "content": "x"}),
+    ("Write", {"file_path": "/workspace/docs/.smoke", "content": "x"}),
+    ("Write", {"file_path": "/workspace/ref/.smoke", "content": "x"}),
     ("WebFetch", {"url": "https://example.com", "prompt": "Say hi"}),
+    ("WebSearch", {"query": "benchmark smoke test"}),
 ]
 
 

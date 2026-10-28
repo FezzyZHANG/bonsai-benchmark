@@ -106,13 +106,17 @@ with `-ngl 0`) and is not subject to the gate during calibration.
 
 ## Sandbox
 
-`sandbox/smoke_test.sh` passed against a mock Messages API: Bash runs, the GPU
-is visible (`AMD Radeon RX 9070 (RADV GFX1201)`), `Write`/`Read` work in
-`/workspace`, `WebFetch` is refused as unavailable, and the run exits cleanly.
-The mock observed the injected upstream credential; the proxy log shows
-`authorization":["<redacted>"]`. The agent container cannot resolve or reach
-external hosts. Default wall-clock budget is 2 hours, exported as
-`BENCH_DEADLINE_EPOCH`; `time-left` reports the remainder and
+`sandbox/smoke_test.sh` passed against a mock Messages API with individual
+simple Bash commands (plus the workspace-script workaround for classifier
+false negatives): the GPU is visible (`AMD Radeon RX 9070 (RADV GFX1201)`),
+`Write`/`Read` work in `/workspace`, `data/`/`docs/`/`ref/` are read-only,
+`WebFetch` and `WebSearch` are refused, the agent environment contains only
+the dummy token, external and egress-network hosts are unreachable, and the
+Zig/`glslc`/`glslangValidator`/`slangc`/`spirv-val`/`gguf-py`/CPU-reference
+toolchain works (including a `zig build` of the ABI stub). The mock observed
+the injected upstream credential; the proxy log shows
+`authorization":["<redacted>"]`. Default wall-clock budget is 2 hours, exported
+as `BENCH_DEADLINE_EPOCH`; `time-left` reports the remainder and
 `RUN_NAME.meta.json` records start/end/timeout.
 
 ## Reproducing

@@ -59,6 +59,13 @@ Everything is offline. Available tools and data:
 - **Docs**: `docs/` contains the Vulkan 1.4 spec, Roadmap 2026 appendix and
   profile, SPIR-V/GLSL specs, GGUF spec, Vulkan Profiles overview, and Zig docs.
 
+## Bash command classification
+
+Claude Code may deny a safe Bash command when it is compound. Prefer one simple
+command per call, do not set environment variables to paths outside the
+workspace, and if a command is still denied, put it in a workspace script and
+run the script.
+
 ## Time budget
 
 The session is terminated at a fixed wall-clock deadline. `BENCH_DEADLINE_EPOCH`
