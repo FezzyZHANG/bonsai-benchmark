@@ -78,9 +78,13 @@ container). `RUN_TIMEOUT` bounds the run (default 4 h).
   (`/v1/messages`, `/v1/messages/count_tokens`, `/v1/models`) configured by
   `ALLOWED_PATHS`; `MAX_REQUESTS` bounds the budget.
 - Claude Code runs inside the container with `sandbox.enabled = false`
-  (`sandbox/settings.template.json`); podman is the sandbox. `WebFetch` and
-  `WebSearch` are denied at the Claude permission level; the container network
-  blocks everything except the proxy.
+  (`sandbox/settings.template.json`) and `--permission-mode dontAsk`; podman is
+  the sandbox. `WebFetch` and `WebSearch` are denied at the Claude permission
+  level; the container network blocks everything except the proxy. Denying
+  `WebSearch` matters even offline: it is executed server-side by the model API
+  and would work through the proxy. Bypass mode is deliberately not used (it is
+  refused as root without `IS_SANDBOX=1`, and it would drop the deny rules).
+  The allowlist covers the workflow; `sandbox/smoke_test.sh` checks it.
 - GPU: `--device /dev/dri --group-add keep-groups`; the image carries Mesa
   RADV. Use the host's `render` group/ACL as in the investigation.
 - The transcript is `RUNS_ROOT/RUN_NAME.transcript.jsonl`; proxy JSONL is
