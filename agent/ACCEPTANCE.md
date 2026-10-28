@@ -26,7 +26,7 @@ produced by the CPU llama.cpp backend. The correctness score is a weighted mean:
 | suite | weight | metric |
 |---|---:|---|
 | tokenizer | 0.10 | fraction of hidden strings whose token ids match exactly |
-| dequant | 0.15 | fraction of sampled tensors whose f32 values match the reference exactly (PTQ1_0 values widened from f16; F32 copied) |
+| dequant | 0.15 | fraction of sampled tensors whose f32 values match the reference exactly (PTQ1_0 widened from f16; F32 copied) and whose `tensor_info` type/rank/shape match the GGUF |
 | logits | 0.30 | per prompt at n_ctx 512/2048/4096/8192: top-1 match, mean KL, cosine |
 | positions | 0.15 | hidden corpus at n_ctx 512/2048: top-1 agreement and mean KL across positions |
 | greedy | 0.30 | teacher-forced agreement over 64 steps after 64/2048/8192-token prompts, plus a `generate` smoke test |

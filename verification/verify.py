@@ -230,8 +230,12 @@ def write_report(rep, out):
         err = c.get("details", {}).get("error")
         if err:
             L.append(f"- harness error: `{err}`")
+        if rep.get("harness_error"):
+            L.append(f"- harness failed: `{rep['harness_error']}`")
         p = rep.get("perf", {})
-        if p.get("speedup_geomean") is not None:
+        if p.get("error"):
+            L.append(f"- performance: FAILED (`{p['error']}`)")
+        elif p.get("speedup_geomean") is not None:
             L.append(f"- performance: geomean speedup vs llama.cpp Vulkan = {p['speedup_geomean']:.3f}")
             L += ["", "| test | agent t/s | reference t/s | speedup |", "|---|---:|---:|---:|"]
             for k, v in p.get("rows", {}).items():
@@ -294,7 +298,10 @@ def main():
     rep["agent_vram_peak_bytes"] = res.get("vram_peak_bytes")
     rep["agent_host_rss_bytes"] = res.get("host_peak_rss_bytes")
 
-    if not args.skip_perf:
+    if not args.skip_perf and "perf" not in res:
+        rep["perf"] = {"rows": {}, "speedup_geomean": 0.0,
+                       "error": res.get("perf_error", "perf run failed")}
+    if not args.skip_perf and "perf" in res:
         ref = measure_reference(args.no_container)
         rows = {}
         for kind in ("pp", "tg"):

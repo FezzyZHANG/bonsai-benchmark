@@ -524,7 +524,11 @@ def main():
                              "accepted": correctness >= 0.90}
 
     if not args.skip_perf:
-        result["perf"] = run_perf(eng, golden["corpus_tokens"])
+        try:
+            result["perf"] = run_perf(eng, golden["corpus_tokens"])
+        except Exception as e:  # noqa: BLE001
+            result["perf_error"] = repr(e)
+            print(f"perf failed: {e!r}", flush=True)
 
     eng.close()
     finish()

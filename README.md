@@ -85,6 +85,10 @@ container). `RUN_TIMEOUT` bounds the run (default 4 h).
   RADV. Use the host's `render` group/ACL as in the investigation.
 - The transcript is `RUNS_ROOT/RUN_NAME.transcript.jsonl`; proxy JSONL is
   `RUNS_ROOT/RUN_NAME/proxy.jsonl`.
+- `sandbox/smoke_test.sh [NAME]` validates the whole sandbox against a local
+  mock Messages API (`sandbox/mock_anthropic.py`): tool use, GPU access,
+  workspace writes and the WebFetch denial, without spending real API calls or
+  exposing a credential.
 
 ## Grading
 
