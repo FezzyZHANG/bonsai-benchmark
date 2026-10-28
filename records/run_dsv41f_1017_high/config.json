@@ -1,0 +1,41 @@
+{
+  "compact_window": 786432,
+  "effort": "high",
+  "launch_env": {
+    "ANTHROPIC_AUTH_TOKEN": "REDACTED (proxy-managed; not stored)",
+    "ANTHROPIC_BASE_URL": "http://host.containers.internal:11451",
+    "BENCH_COMPACT_WINDOW": "786432",
+    "BENCH_EFFORT": "high",
+    "BENCH_MAX_CONTEXT": "1000000",
+    "BENCH_MODEL": "deepseek-flash[1m]"
+  },
+  "max_context": 1000000,
+  "meta": {
+    "budget_s": 7200,
+    "deadline_epoch": 1793162536,
+    "elapsed_s": 4032,
+    "end_epoch": 1793159369,
+    "exit": 0,
+    "start_epoch": 1793155337,
+    "timed_out": false
+  },
+  "model": "deepseek-flash[1m]",
+  "notes": "The real upstream credential is held by the host-side systemd proxy (anthropic-proxy.service) and is not present in the agent container, the Claude Code settings, or this record.",
+  "run": "run_dsv41f_1017_high",
+  "settings_file": "settings.json",
+  "tuning": {
+    "BENCH_MODEL": "deepseek-flash[1m]",
+    "CLAUDE_CODE_AUTO_COMPACT_WINDOW": "786432",
+    "CLAUDE_CODE_DISABLE_EXPLORE_PLAN_AGENTS": "1",
+    "CLAUDE_CODE_EFFORT_LEVEL": "high",
+    "CLAUDE_CODE_ENABLE_TODO_TOOLS": "1",
+    "CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS": "1",
+    "CLAUDE_CODE_MAX_CONTEXT_TOKENS": "1000000",
+    "CLAUDE_CODE_MAX_OUTPUT_TOKENS": "",
+    "CLAUDE_CODE_MAX_SUBAGENTS_PER_SESSION": "8",
+    "CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH": "1",
+    "CLAUDE_CODE_MAX_TURNS": "",
+    "CLAUDE_CODE_SIMPLE_SYSTEM_PROMPT": "",
+    "CLAUDE_CODE_SUBAGENT_MODEL": "inherit"
+  }
+}

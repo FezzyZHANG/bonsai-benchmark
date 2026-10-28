@@ -1,0 +1,29 @@
+WARNING: radv is not a conformant Vulkan implementation, testing use only.
+open rc 0 err None model c_void_p(981700128)
+n_vocab 248320 n_tensors 426
+tok True Hi! [12675, 0] [12675, 0]
+tok True A quick brown fox jumps o [32, 3841, 13477, 37550, 33075, 888, 279, 15217] [32, 3841, 13477, 37550, 33075, 888, 279, 15217]
+tok True func main() {
+	return 0
+} [2739, 1822, 363, 313, 198, 827, 220, 15] [2739, 1822, 363, 313, 198, 827, 220, 15]
+tok True   padded text   [220, 42417, 1414, 256] [220, 42417, 1414, 256]
+tok True 
+
+tabs	tabs
+ [845, 29975, 3139, 3325, 317] [845, 29975, 3139, 3325, 317]
+tok True 한국어 텍스트와 中文混合 [174675, 30061, 225287, 77792, 220, 99986, 101742] [174675, 30061, 225287, 77792, 220, 99986, 101742]
+tok True ñ combining tilde: mañan [77, 136, 225, 33041, 9960, 442, 25, 92215] [77, 136, 225, 33041, 9960, 442, 25, 92215]
+tok True ¡Hola, señor! [38511, 65717, 11, 202576, 0] [38511, 65717, 11, 202576, 0]
+tok True 🥑 emoji 🧪 lab [9008, 98, 239, 40958, 10838, 100, 103, 9775] [9008, 98, 239, 40958, 10838, 100, 103, 9775]
+tok True <|im_end|>user
+<|im_start [248046, 846, 198, 248045, 74455] [248046, 846, 198, 248045, 74455]
+tok True Z [57] [57]
+tok True 42 2.71828 +7 [19, 17, 220, 17, 13, 22, 16, 23] [19, 17, 220, 17, 13, 22, 16, 23]
+tok True camelCase with spaces-and [90106, 4068, 440, 12258, 9485, 788, 13648] [90106, 4068, 440, 12258, 9485, 788, 13648]
+tok True windows
+newlines
+ [26209, 317, 902, 7718, 317] [26209, 317, 902, 7718, 317]
+tok True 	 	 [46330] [46330]
+tinfo0 0 b'output_norm.weight' 0 1 [2560, 1, 1, 1]
+b'blk.0.attn_gate.weight' deq ret 10485760 cnt 10485760 maxdiff 0.0 ne [2560, 4096, 1, 1] stshape [4096, 2560]
+b'token_embd.weight' deq ret 635699200 cnt 635699200 maxdiff 0.0 ne [2560, 248320, 1, 1] stshape [248320, 2560]

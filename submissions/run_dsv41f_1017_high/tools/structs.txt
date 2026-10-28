@@ -1,0 +1,740 @@
+===== struct_VkApplicationInfo = extern struct
+pub const struct_VkApplicationInfo = extern struct {
+    sType: VkStructureType = @import("std").mem.zeroes(VkStructureType),
+    pNext: ?*const anyopaque = null,
+    pApplicationName: [*c]const u8 = null,
+    applicationVersion: u32 = 0,
+    pEngineName: [*c]const u8 = null,
+    engineVersion: u32 = 0,
+    apiVersion: u32 = 0,
+};
+===== struct_VkInstanceCreateInfo = extern struct
+pub const struct_VkInstanceCreateInfo = extern struct {
+    sType: VkStructureType = @import("std").mem.zeroes(VkStructureType),
+    pNext: ?*const anyopaque = null,
+    flags: VkInstanceCreateFlags = 0,
+    pApplicationInfo: [*c]const VkApplicationInfo = null,
+    enabledLayerCount: u32 = 0,
+    ppEnabledLayerNames: [*c]const [*c]const u8 = null,
+    enabledExtensionCount: u32 = 0,
+    ppEnabledExtensionNames: [*c]const [*c]const u8 = null,
+    pub const vkCreateInstance = __root.vkCreateInstance;
+};
+===== struct_VkPhysicalDeviceFeatures2 = extern struct
+pub const struct_VkPhysicalDeviceFeatures2 = extern struct {
+    sType: VkStructureType = @import("std").mem.zeroes(VkStructureType),
+    pNext: ?*anyopaque = null,
+    features: VkPhysicalDeviceFeatures = @import("std").mem.zeroes(VkPhysicalDeviceFeatures),
+};
+===== struct_VkPhysicalDeviceFeatures = extern struct
+pub const struct_VkPhysicalDeviceFeatures = extern struct {
+    robustBufferAccess: VkBool32 = 0,
+    fullDrawIndexUint32: VkBool32 = 0,
+    imageCubeArray: VkBool32 = 0,
+    independentBlend: VkBool32 = 0,
+    geometryShader: VkBool32 = 0,
+    tessellationShader: VkBool32 = 0,
+    sampleRateShading: VkBool32 = 0,
+    dualSrcBlend: VkBool32 = 0,
+    logicOp: VkBool32 = 0,
+    multiDrawIndirect: VkBool32 = 0,
+    drawIndirectFirstInstance: VkBool32 = 0,
+    depthClamp: VkBool32 = 0,
+    depthBiasClamp: VkBool32 = 0,
+    fillModeNonSolid: VkBool32 = 0,
+    depthBounds: VkBool32 = 0,
+    wideLines: VkBool32 = 0,
+    largePoints: VkBool32 = 0,
+    alphaToOne: VkBool32 = 0,
+    multiViewport: VkBool32 = 0,
+    samplerAnisotropy: VkBool32 = 0,
+    textureCompressionETC2: VkBool32 = 0,
+    textureCompressionASTC_LDR: VkBool32 = 0,
+    textureCompressionBC: VkBool32 = 0,
+    occlusionQueryPrecise: VkBool32 = 0,
+    pipelineStatisticsQuery: VkBool32 = 0,
+    vertexPipelineStoresAndAtomics: VkBool32 = 0,
+    fragmentStoresAndAtomics: VkBool32 = 0,
+    shaderTessellationAndGeometryPointSize: VkBool32 = 0,
+    shaderImageGatherExtended: VkBool32 = 0,
+    shaderStorageImageExtendedFormats: VkBool32 = 0,
+    shaderStorageImageMultisample: VkBool32 = 0,
+    shaderStorageImageReadWithoutFormat: VkBool32 = 0,
+    shaderStorageImageWriteWithoutFormat: VkBool32 = 0,
+    shaderUniformBufferArrayDynamicIndexing: VkBool32 = 0,
+    shaderSampledImageArrayDynamicIndexing: VkBool32 = 0,
+    shaderStorageBufferArrayDynamicIndexing: VkBool32 = 0,
+    shaderStorageImageArrayDynamicIndexing: VkBool32 = 0,
+    shaderClipDistance: VkBool32 = 0,
+    shaderCullDistance: VkBool32 = 0,
+    shaderFloat64: VkBool32 = 0,
+    shaderInt64: VkBool32 = 0,
+    shaderInt16: VkBool32 = 0,
+    shaderResourceResidency: VkBool32 = 0,
+    shaderResourceMinLod: VkBool32 = 0,
+    sparseBinding: VkBool32 = 0,
+    sparseResidencyBuffer: VkBool32 = 0,
+    sparseResidencyImage2D: VkBool32 = 0,
+    sparseResidencyImage3D: VkBool32 = 0,
+    sparseResidency2Samples: VkBool32 = 0,
+    sparseResidency4Samples: VkBool32 = 0,
+    sparseResidency8Samples: VkBool32 = 0,
+    sparseResidency16Samples: VkBool32 = 0,
+    sparseResidencyAliased: VkBool32 = 0,
+    variableMultisampleRate: VkBool32 = 0,
+    inheritedQueries: VkBool32 = 0,
+};
+===== struct_VkPhysicalDeviceVulkan11Features = extern struct
+pub const struct_VkPhysicalDeviceVulkan11Features = extern struct {
+    sType: VkStructureType = @import("std").mem.zeroes(VkStructureType),
+    pNext: ?*anyopaque = null,
+    storageBuffer16BitAccess: VkBool32 = 0,
+    uniformAndStorageBuffer16BitAccess: VkBool32 = 0,
+    storagePushConstant16: VkBool32 = 0,
+    storageInputOutput16: VkBool32 = 0,
+    multiview: VkBool32 = 0,
+    multiviewGeometryShader: VkBool32 = 0,
+    multiviewTessellationShader: VkBool32 = 0,
+    variablePointersStorageBuffer: VkBool32 = 0,
+    variablePointers: VkBool32 = 0,
+    protectedMemory: VkBool32 = 0,
+    samplerYcbcrConversion: VkBool32 = 0,
+    shaderDrawParameters: VkBool32 = 0,
+};
+===== struct_VkPhysicalDeviceVulkan12Features = extern struct
+pub const struct_VkPhysicalDeviceVulkan12Features = extern struct {
+    sType: VkStructureType = @import("std").mem.zeroes(VkStructureType),
+    pNext: ?*anyopaque = null,
+    samplerMirrorClampToEdge: VkBool32 = 0,
+    drawIndirectCount: VkBool32 = 0,
+    storageBuffer8BitAccess: VkBool32 = 0,
+    uniformAndStorageBuffer8BitAccess: VkBool32 = 0,
+    storagePushConstant8: VkBool32 = 0,
+    shaderBufferInt64Atomics: VkBool32 = 0,
+    shaderSharedInt64Atomics: VkBool32 = 0,
+    shaderFloat16: VkBool32 = 0,
+    shaderInt8: VkBool32 = 0,
+    descriptorIndexing: VkBool32 = 0,
+    shaderInputAttachmentArrayDynamicIndexing: VkBool32 = 0,
+    shaderUniformTexelBufferArrayDynamicIndexing: VkBool32 = 0,
+    shaderStorageTexelBufferArrayDynamicIndexing: VkBool32 = 0,
+    shaderUniformBufferArrayNonUniformIndexing: VkBool32 = 0,
+    shaderSampledImageArrayNonUniformIndexing: VkBool32 = 0,
+    shaderStorageBufferArrayNonUniformIndexing: VkBool32 = 0,
+    shaderStorageImageArrayNonUniformIndexing: VkBool32 = 0,
+    shaderInputAttachmentArrayNonUniformIndexing: VkBool32 = 0,
+    shaderUniformTexelBufferArrayNonUniformIndexing: VkBool32 = 0,
+    shaderStorageTexelBufferArrayNonUniformIndexing: VkBool32 = 0,
+    descriptorBindingUniformBufferUpdateAfterBind: VkBool32 = 0,
+    descriptorBindingSampledImageUpdateAfterBind: VkBool32 = 0,
+    descriptorBindingStorageImageUpdateAfterBind: VkBool32 = 0,
+    descriptorBindingStorageBufferUpdateAfterBind: VkBool32 = 0,
+    descriptorBindingUniformTexelBufferUpdateAfterBind: VkBool32 = 0,
+    descriptorBindingStorageTexelBufferUpdateAfterBind: VkBool32 = 0,
+    descriptorBindingUpdateUnusedWhilePending: VkBool32 = 0,
+    descriptorBindingPartiallyBound: VkBool32 = 0,
+    descriptorBindingVariableDescriptorCount: VkBool32 = 0,
+    runtimeDescriptorArray: VkBool32 = 0,
+    samplerFilterMinmax: VkBool32 = 0,
+    scalarBlockLayout: VkBool32 = 0,
+    imagelessFramebuffer: VkBool32 = 0,
+    uniformBufferStandardLayout: VkBool32 = 0,
+    shaderSubgroupExtendedTypes: VkBool32 = 0,
+    separateDepthStencilLayouts: VkBool32 = 0,
+    hostQueryReset: VkBool32 = 0,
+    timelineSemaphore: VkBool32 = 0,
+    bufferDeviceAddress: VkBool32 = 0,
+    bufferDeviceAddressCaptureReplay: VkBool32 = 0,
+    bufferDeviceAddressMultiDevice: VkBool32 = 0,
+    vulkanMemoryModel: VkBool32 = 0,
+    vulkanMemoryModelDeviceScope: VkBool32 = 0,
+    vulkanMemoryModelAvailabilityVisibilityChains: VkBool32 = 0,
+    shaderOutputViewportIndex: VkBool32 = 0,
+    shaderOutputLayer: VkBool32 = 0,
+    subgroupBroadcastDynamicId: VkBool32 = 0,
+};
+===== struct_VkPhysicalDeviceVulkan13Features = extern struct
+pub const struct_VkPhysicalDeviceVulkan13Features = extern struct {
+    sType: VkStructureType = @import("std").mem.zeroes(VkStructureType),
+    pNext: ?*anyopaque = null,
+    robustImageAccess: VkBool32 = 0,
+    inlineUniformBlock: VkBool32 = 0,
+    descriptorBindingInlineUniformBlockUpdateAfterBind: VkBool32 = 0,
+    pipelineCreationCacheControl: VkBool32 = 0,
+    privateData: VkBool32 = 0,
+    shaderDemoteToHelperInvocation: VkBool32 = 0,
+    shaderTerminateInvocation: VkBool32 = 0,
+    subgroupSizeControl: VkBool32 = 0,
+    computeFullSubgroups: VkBool32 = 0,
+    synchronization2: VkBool32 = 0,
+    textureCompressionASTC_HDR: VkBool32 = 0,
+    shaderZeroInitializeWorkgroupMemory: VkBool32 = 0,
+    dynamicRendering: VkBool32 = 0,
+    shaderIntegerDotProduct: VkBool32 = 0,
+    maintenance4: VkBool32 = 0,
+};
+===== struct_VkDeviceQueueCreateInfo = extern struct
+pub const struct_VkDeviceQueueCreateInfo = extern struct {
+    sType: VkStructureType = @import("std").mem.zeroes(VkStructureType),
+    pNext: ?*const anyopaque = null,
+    flags: VkDeviceQueueCreateFlags = 0,
+    queueFamilyIndex: u32 = 0,
+    queueCount: u32 = 0,
+    pQueuePriorities: [*c]const f32 = null,
+};
+===== struct_VkDeviceCreateInfo = extern struct
+pub const struct_VkDeviceCreateInfo = extern struct {
+    sType: VkStructureType = @import("std").mem.zeroes(VkStructureType),
+    pNext: ?*const anyopaque = null,
+    flags: VkDeviceCreateFlags = 0,
+    queueCreateInfoCount: u32 = 0,
+    pQueueCreateInfos: [*c]const VkDeviceQueueCreateInfo = null,
+    enabledLayerCount: u32 = 0,
+    ppEnabledLayerNames: [*c]const [*c]const u8 = null,
+    enabledExtensionCount: u32 = 0,
+    ppEnabledExtensionNames: [*c]const [*c]const u8 = null,
+    pEnabledFeatures: [*c]const VkPhysicalDeviceFeatures = null,
+};
+===== struct_VkExtensionProperties = extern struct
+pub const struct_VkExtensionProperties = extern struct {
+    extensionName: [256]u8 = @import("std").mem.zeroes([256]u8),
+    specVersion: u32 = 0,
+};
+===== struct_VkQueueFamilyProperties = extern struct
+pub const struct_VkQueueFamilyProperties = extern struct {
+    queueFlags: VkQueueFlags = 0,
+    queueCount: u32 = 0,
+    timestampValidBits: u32 = 0,
+    minImageTransferGranularity: VkExtent3D = @import("std").mem.zeroes(VkExtent3D),
+};
+===== struct_VkPhysicalDeviceMemoryProperties = extern struct
+pub const struct_VkPhysicalDeviceMemoryProperties = extern struct {
+    memoryTypeCount: u32 = 0,
+    memoryTypes: [32]VkMemoryType = @import("std").mem.zeroes([32]VkMemoryType),
+    memoryHeapCount: u32 = 0,
+    memoryHeaps: [16]VkMemoryHeap = @import("std").mem.zeroes([16]VkMemoryHeap),
+};
+===== struct_VkMemoryType = extern struct
+pub const struct_VkMemoryType = extern struct {
+    propertyFlags: VkMemoryPropertyFlags = 0,
+    heapIndex: u32 = 0,
+};
+===== struct_VkMemoryHeap = extern struct
+pub const struct_VkMemoryHeap = extern struct {
+    size: VkDeviceSize = 0,
+    flags: VkMemoryHeapFlags = 0,
+};
+===== struct_VkMemoryRequirements = extern struct
+pub const struct_VkMemoryRequirements = extern struct {
+    size: VkDeviceSize = 0,
+    alignment: VkDeviceSize = 0,
+    memoryTypeBits: u32 = 0,
+};
+===== struct_VkBufferCreateInfo = extern struct
+pub const struct_VkBufferCreateInfo = extern struct {
+    sType: VkStructureType = @import("std").mem.zeroes(VkStructureType),
+    pNext: ?*const anyopaque = null,
+    flags: VkBufferCreateFlags = 0,
+    size: VkDeviceSize = 0,
+    usage: VkBufferUsageFlags = 0,
+    sharingMode: VkSharingMode = @import("std").mem.zeroes(VkSharingMode),
+    queueFamilyIndexCount: u32 = 0,
+    pQueueFamilyIndices: [*c]const u32 = null,
+};
+===== struct_VkMemoryAllocateInfo = extern struct
+pub const struct_VkMemoryAllocateInfo = extern struct {
+    sType: VkStructureType = @import("std").mem.zeroes(VkStructureType),
+    pNext: ?*const anyopaque = null,
+    allocationSize: VkDeviceSize = 0,
+    memoryTypeIndex: u32 = 0,
+};
+===== struct_VkMemoryAllocateFlagsInfo = extern struct
+pub const struct_VkMemoryAllocateFlagsInfo = extern struct {
+    sType: VkStructureType = @import("std").mem.zeroes(VkStructureType),
+    pNext: ?*const anyopaque = null,
+    flags: VkMemoryAllocateFlags = 0,
+    deviceMask: u32 = 0,
+};
+===== struct_VkBufferDeviceAddressInfo = extern struct
+pub const struct_VkBufferDeviceAddressInfo = extern struct {
+    sType: VkStructureType = @import("std").mem.zeroes(VkStructureType),
+    pNext: ?*const anyopaque = null,
+    buffer: VkBuffer = null,
+};
+===== struct_VkBufferCopy = extern struct
+pub const struct_VkBufferCopy = extern struct {
+    srcOffset: VkDeviceSize = 0,
+    dstOffset: VkDeviceSize = 0,
+    size: VkDeviceSize = 0,
+};
+===== struct_VkCommandPoolCreateInfo = extern struct
+pub const struct_VkCommandPoolCreateInfo = extern struct {
+    sType: VkStructureType = @import("std").mem.zeroes(VkStructureType),
+    pNext: ?*const anyopaque = null,
+    flags: VkCommandPoolCreateFlags = 0,
+    queueFamilyIndex: u32 = 0,
+};
+===== struct_VkCommandBufferAllocateInfo = extern struct
+pub const struct_VkCommandBufferAllocateInfo = extern struct {
+    sType: VkStructureType = @import("std").mem.zeroes(VkStructureType),
+    pNext: ?*const anyopaque = null,
+    commandPool: VkCommandPool = null,
+    level: VkCommandBufferLevel = @import("std").mem.zeroes(VkCommandBufferLevel),
+    commandBufferCount: u32 = 0,
+};
+===== struct_VkCommandBufferBeginInfo = extern struct
+pub const struct_VkCommandBufferBeginInfo = extern struct {
+    sType: VkStructureType = @import("std").mem.zeroes(VkStructureType),
+    pNext: ?*const anyopaque = null,
+    flags: VkCommandBufferUsageFlags = 0,
+    pInheritanceInfo: [*c]const VkCommandBufferInheritanceInfo = null,
+};
+===== struct_VkSubmitInfo = extern struct
+pub const struct_VkSubmitInfo = extern struct {
+    sType: VkStructureType = @import("std").mem.zeroes(VkStructureType),
+    pNext: ?*const anyopaque = null,
+    waitSemaphoreCount: u32 = 0,
+    pWaitSemaphores: [*c]const VkSemaphore = null,
+    pWaitDstStageMask: [*c]const VkPipelineStageFlags = null,
+    commandBufferCount: u32 = 0,
+    pCommandBuffers: [*c]const VkCommandBuffer = null,
+    signalSemaphoreCount: u32 = 0,
+    pSignalSemaphores: [*c]const VkSemaphore = null,
+};
+===== struct_VkFenceCreateInfo = extern struct
+pub const struct_VkFenceCreateInfo = extern struct {
+    sType: VkStructureType = @import("std").mem.zeroes(VkStructureType),
+    pNext: ?*const anyopaque = null,
+    flags: VkFenceCreateFlags = 0,
+};
+===== struct_VkShaderModuleCreateInfo = extern struct
+pub const struct_VkShaderModuleCreateInfo = extern struct {
+    sType: VkStructureType = @import("std").mem.zeroes(VkStructureType),
+    pNext: ?*const anyopaque = null,
+    flags: VkShaderModuleCreateFlags = 0,
+    codeSize: usize = 0,
+    pCode: [*c]const u32 = null,
+};
+===== struct_VkDescriptorSetLayoutBinding = extern struct
+pub const struct_VkDescriptorSetLayoutBinding = extern struct {
+    binding: u32 = 0,
+    descriptorType: VkDescriptorType = @import("std").mem.zeroes(VkDescriptorType),
+    descriptorCount: u32 = 0,
+    stageFlags: VkShaderStageFlags = 0,
+    pImmutableSamplers: [*c]const VkSampler = null,
+};
+===== struct_VkDescriptorSetLayoutCreateInfo = extern struct
+pub const struct_VkDescriptorSetLayoutCreateInfo = extern struct {
+    sType: VkStructureType = @import("std").mem.zeroes(VkStructureType),
+    pNext: ?*const anyopaque = null,
+    flags: VkDescriptorSetLayoutCreateFlags = 0,
+    bindingCount: u32 = 0,
+    pBindings: [*c]const VkDescriptorSetLayoutBinding = null,
+};
+===== struct_VkPipelineLayoutCreateInfo = extern struct
+pub const struct_VkPipelineLayoutCreateInfo = extern struct {
+    sType: VkStructureType = @import("std").mem.zeroes(VkStructureType),
+    pNext: ?*const anyopaque = null,
+    flags: VkPipelineLayoutCreateFlags = 0,
+    setLayoutCount: u32 = 0,
+    pSetLayouts: [*c]const VkDescriptorSetLayout = null,
+    pushConstantRangeCount: u32 = 0,
+    pPushConstantRanges: [*c]const VkPushConstantRange = null,
+};
+===== struct_VkPipelineShaderStageCreateInfo = extern struct
+pub const struct_VkPipelineShaderStageCreateInfo = extern struct {
+    sType: VkStructureType = @import("std").mem.zeroes(VkStructureType),
+    pNext: ?*const anyopaque = null,
+    flags: VkPipelineShaderStageCreateFlags = 0,
+    stage: VkShaderStageFlagBits = @import("std").mem.zeroes(VkShaderStageFlagBits),
+    module: VkShaderModule = null,
+    pName: [*c]const u8 = null,
+    pSpecializationInfo: [*c]const VkSpecializationInfo = null,
+};
+===== struct_VkComputePipelineCreateInfo = extern struct
+pub const struct_VkComputePipelineCreateInfo = extern struct {
+    sType: VkStructureType = @import("std").mem.zeroes(VkStructureType),
+    pNext: ?*const anyopaque = null,
+    flags: VkPipelineCreateFlags = 0,
+    stage: VkPipelineShaderStageCreateInfo = @import("std").mem.zeroes(VkPipelineShaderStageCreateInfo),
+    layout: VkPipelineLayout = null,
+    basePipelineHandle: VkPipeline = null,
+    basePipelineIndex: i32 = 0,
+};
+===== struct_VkDescriptorPoolSize = extern struct
+pub const struct_VkDescriptorPoolSize = extern struct {
+    type: VkDescriptorType = @import("std").mem.zeroes(VkDescriptorType),
+    descriptorCount: u32 = 0,
+};
+===== struct_VkDescriptorPoolCreateInfo = extern struct
+pub const struct_VkDescriptorPoolCreateInfo = extern struct {
+    sType: VkStructureType = @import("std").mem.zeroes(VkStructureType),
+    pNext: ?*const anyopaque = null,
+    flags: VkDescriptorPoolCreateFlags = 0,
+    maxSets: u32 = 0,
+    poolSizeCount: u32 = 0,
+    pPoolSizes: [*c]const VkDescriptorPoolSize = null,
+};
+===== struct_VkDescriptorSetAllocateInfo = extern struct
+pub const struct_VkDescriptorSetAllocateInfo = extern struct {
+    sType: VkStructureType = @import("std").mem.zeroes(VkStructureType),
+    pNext: ?*const anyopaque = null,
+    descriptorPool: VkDescriptorPool = null,
+    descriptorSetCount: u32 = 0,
+    pSetLayouts: [*c]const VkDescriptorSetLayout = null,
+};
+===== struct_VkDescriptorBufferInfo = extern struct
+pub const struct_VkDescriptorBufferInfo = extern struct {
+    buffer: VkBuffer = null,
+    offset: VkDeviceSize = 0,
+    range: VkDeviceSize = 0,
+};
+===== struct_VkWriteDescriptorSet = extern struct
+pub const struct_VkWriteDescriptorSet = extern struct {
+    sType: VkStructureType = @import("std").mem.zeroes(VkStructureType),
+    pNext: ?*const anyopaque = null,
+    dstSet: VkDescriptorSet = null,
+    dstBinding: u32 = 0,
+    dstArrayElement: u32 = 0,
+    descriptorCount: u32 = 0,
+    descriptorType: VkDescriptorType = @import("std").mem.zeroes(VkDescriptorType),
+    pImageInfo: [*c]const VkDescriptorImageInfo = null,
+    pBufferInfo: [*c]const VkDescriptorBufferInfo = null,
+    pTexelBufferView: [*c]const VkBufferView = null,
+};
+===== struct_VkPhysicalDeviceProperties = extern struct
+pub const struct_VkPhysicalDeviceProperties = extern struct {
+    apiVersion: u32 = 0,
+    driverVersion: u32 = 0,
+    vendorID: u32 = 0,
+    deviceID: u32 = 0,
+    deviceType: VkPhysicalDeviceType = @import("std").mem.zeroes(VkPhysicalDeviceType),
+    deviceName: [256]u8 = @import("std").mem.zeroes([256]u8),
+    pipelineCacheUUID: [16]u8 = @import("std").mem.zeroes([16]u8),
+    limits: VkPhysicalDeviceLimits = @import("std").mem.zeroes(VkPhysicalDeviceLimits),
+    sparseProperties: VkPhysicalDeviceSparseProperties = @import("std").mem.zeroes(VkPhysicalDeviceSparseProperties),
+};
+===== struct_VkPhysicalDeviceLimits = extern struct
+pub const struct_VkPhysicalDeviceLimits = extern struct {
+    maxImageDimension1D: u32 = 0,
+    maxImageDimension2D: u32 = 0,
+    maxImageDimension3D: u32 = 0,
+    maxImageDimensionCube: u32 = 0,
+    maxImageArrayLayers: u32 = 0,
+    maxTexelBufferElements: u32 = 0,
+    maxUniformBufferRange: u32 = 0,
+    maxStorageBufferRange: u32 = 0,
+    maxPushConstantsSize: u32 = 0,
+    maxMemoryAllocationCount: u32 = 0,
+    maxSamplerAllocationCount: u32 = 0,
+    bufferImageGranularity: VkDeviceSize = 0,
+    sparseAddressSpaceSize: VkDeviceSize = 0,
+    maxBoundDescriptorSets: u32 = 0,
+    maxPerStageDescriptorSamplers: u32 = 0,
+    maxPerStageDescriptorUniformBuffers: u32 = 0,
+    maxPerStageDescriptorStorageBuffers: u32 = 0,
+    maxPerStageDescriptorSampledImages: u32 = 0,
+    maxPerStageDescriptorStorageImages: u32 = 0,
+    maxPerStageDescriptorInputAttachments: u32 = 0,
+    maxPerStageResources: u32 = 0,
+    maxDescriptorSetSamplers: u32 = 0,
+    maxDescriptorSetUniformBuffers: u32 = 0,
+    maxDescriptorSetUniformBuffersDynamic: u32 = 0,
+    maxDescriptorSetStorageBuffers: u32 = 0,
+    maxDescriptorSetStorageBuffersDynamic: u32 = 0,
+    maxDescriptorSetSampledImages: u32 = 0,
+    maxDescriptorSetStorageImages: u32 = 0,
+    maxDescriptorSetInputAttachments: u32 = 0,
+    maxVertexInputAttributes: u32 = 0,
+    maxVertexInputBindings: u32 = 0,
+    maxVertexInputAttributeOffset: u32 = 0,
+    maxVertexInputBindingStride: u32 = 0,
+    maxVertexOutputComponents: u32 = 0,
+    maxTessellationGenerationLevel: u32 = 0,
+    maxTessellationPatchSize: u32 = 0,
+    maxTessellationControlPerVertexInputComponents: u32 = 0,
+    maxTessellationControlPerVertexOutputComponents: u32 = 0,
+    maxTessellationControlPerPatchOutputComponents: u32 = 0,
+    maxTessellationControlTotalOutputComponents: u32 = 0,
+    maxTessellationEvaluationInputComponents: u32 = 0,
+    maxTessellationEvaluationOutputComponents: u32 = 0,
+    maxGeometryShaderInvocations: u32 = 0,
+    maxGeometryInputComponents: u32 = 0,
+    maxGeometryOutputComponents: u32 = 0,
+    maxGeometryOutputVertices: u32 = 0,
+    maxGeometryTotalOutputComponents: u32 = 0,
+    maxFragmentInputComponents: u32 = 0,
+    maxFragmentOutputAttachments: u32 = 0,
+    maxFragmentDualSrcAttachments: u32 = 0,
+    maxFragmentCombinedOutputResources: u32 = 0,
+    maxComputeSharedMemorySize: u32 = 0,
+    maxComputeWorkGroupCount: [3]u32 = @import("std").mem.zeroes([3]u32),
+    maxComputeWorkGroupInvocations: u32 = 0,
+    maxComputeWorkGroupSize: [3]u32 = @import("std").mem.zeroes([3]u32),
+    subPixelPrecisionBits: u32 = 0,
+    subTexelPrecisionBits: u32 = 0,
+    mipmapPrecisionBits: u32 = 0,
+    maxDrawIndexedIndexValue: u32 = 0,
+    maxDrawIndirectCount: u32 = 0,
+    maxSamplerLodBias: f32 = 0,
+    maxSamplerAnisotropy: f32 = 0,
+    maxViewports: u32 = 0,
+    maxViewportDimensions: [2]u32 = @import("std").mem.zeroes([2]u32),
+    viewportBoundsRange: [2]f32 = @import("std").mem.zeroes([2]f32),
+    viewportSubPixelBits: u32 = 0,
+    minMemoryMapAlignment: usize = 0,
+    minTexelBufferOffsetAlignment: VkDeviceSize = 0,
+    minUniformBufferOffsetAlignment: VkDeviceSize = 0,
+    minStorageBufferOffsetAlignment: VkDeviceSize = 0,
+    minTexelOffset: i32 = 0,
+    maxTexelOffset: u32 = 0,
+    minTexelGatherOffset: i32 = 0,
+    maxTexelGatherOffset: u32 = 0,
+    minInterpolationOffset: f32 = 0,
+    maxInterpolationOffset: f32 = 0,
+    subPixelInterpolationOffsetBits: u32 = 0,
+    maxFramebufferWidth: u32 = 0,
+    maxFramebufferHeight: u32 = 0,
+    maxFramebufferLayers: u32 = 0,
+    framebufferColorSampleCounts: VkSampleCountFlags = 0,
+    framebufferDepthSampleCounts: VkSampleCountFlags = 0,
+    framebufferStencilSampleCounts: VkSampleCountFlags = 0,
+    framebufferNoAttachmentsSampleCounts: VkSampleCountFlags = 0,
+    maxColorAttachments: u32 = 0,
+    sampledImageColorSampleCounts: VkSampleCountFlags = 0,
+    sampledImageIntegerSampleCounts: VkSampleCountFlags = 0,
+    sampledImageDepthSampleCounts: VkSampleCountFlags = 0,
+    sampledImageStencilSampleCounts: VkSampleCountFlags = 0,
+    storageImageSampleCounts: VkSampleCountFlags = 0,
+    maxSampleMaskWords: u32 = 0,
+    timestampComputeAndGraphics: VkBool32 = 0,
+    timestampPeriod: f32 = 0,
+    maxClipDistances: u32 = 0,
+    maxCullDistances: u32 = 0,
+    maxCombinedClipAndCullDistances: u32 = 0,
+    discreteQueuePriorities: u32 = 0,
+    pointSizeRange: [2]f32 = @import("std").mem.zeroes([2]f32),
+    lineWidthRange: [2]f32 = @import("std").mem.zeroes([2]f32),
+    pointSizeGranularity: f32 = 0,
+    lineWidthGranularity: f32 = 0,
+    strictLines: VkBool32 = 0,
+    standardSampleLocations: VkBool32 = 0,
+    optimalBufferCopyOffsetAlignment: VkDeviceSize = 0,
+    optimalBufferCopyRowPitchAlignment: VkDeviceSize = 0,
+    nonCoherentAtomSize: VkDeviceSize = 0,
+};
+===== struct_VkPhysicalDeviceProperties2 = extern struct
+pub const struct_VkPhysicalDeviceProperties2 = extern struct {
+    sType: VkStructureType = @import("std").mem.zeroes(VkStructureType),
+    pNext: ?*anyopaque = null,
+    properties: VkPhysicalDeviceProperties = @import("std").mem.zeroes(VkPhysicalDeviceProperties),
+};
+===== struct_VkPhysicalDeviceVulkan12Properties = extern struct
+pub const struct_VkPhysicalDeviceVulkan12Properties = extern struct {
+    sType: VkStructureType = @import("std").mem.zeroes(VkStructureType),
+    pNext: ?*anyopaque = null,
+    driverID: VkDriverId = @import("std").mem.zeroes(VkDriverId),
+    driverName: [256]u8 = @import("std").mem.zeroes([256]u8),
+    driverInfo: [256]u8 = @import("std").mem.zeroes([256]u8),
+    conformanceVersion: VkConformanceVersion = @import("std").mem.zeroes(VkConformanceVersion),
+    denormBehaviorIndependence: VkShaderFloatControlsIndependence = @import("std").mem.zeroes(VkShaderFloatControlsIndependence),
+    roundingModeIndependence: VkShaderFloatControlsIndependence = @import("std").mem.zeroes(VkShaderFloatControlsIndependence),
+    shaderSignedZeroInfNanPreserveFloat16: VkBool32 = 0,
+    shaderSignedZeroInfNanPreserveFloat32: VkBool32 = 0,
+    shaderSignedZeroInfNanPreserveFloat64: VkBool32 = 0,
+    shaderDenormPreserveFloat16: VkBool32 = 0,
+    shaderDenormPreserveFloat32: VkBool32 = 0,
+    shaderDenormPreserveFloat64: VkBool32 = 0,
+    shaderDenormFlushToZeroFloat16: VkBool32 = 0,
+    shaderDenormFlushToZeroFloat32: VkBool32 = 0,
+    shaderDenormFlushToZeroFloat64: VkBool32 = 0,
+    shaderRoundingModeRTEFloat16: VkBool32 = 0,
+    shaderRoundingModeRTEFloat32: VkBool32 = 0,
+    shaderRoundingModeRTEFloat64: VkBool32 = 0,
+    shaderRoundingModeRTZFloat16: VkBool32 = 0,
+    shaderRoundingModeRTZFloat32: VkBool32 = 0,
+    shaderRoundingModeRTZFloat64: VkBool32 = 0,
+    maxUpdateAfterBindDescriptorsInAllPools: u32 = 0,
+    shaderUniformBufferArrayNonUniformIndexingNative: VkBool32 = 0,
+    shaderSampledImageArrayNonUniformIndexingNative: VkBool32 = 0,
+    shaderStorageBufferArrayNonUniformIndexingNative: VkBool32 = 0,
+    shaderStorageImageArrayNonUniformIndexingNative: VkBool32 = 0,
+    shaderInputAttachmentArrayNonUniformIndexingNative: VkBool32 = 0,
+    robustBufferAccessUpdateAfterBind: VkBool32 = 0,
+    quadDivergentImplicitLod: VkBool32 = 0,
+    maxPerStageDescriptorUpdateAfterBindSamplers: u32 = 0,
+    maxPerStageDescriptorUpdateAfterBindUniformBuffers: u32 = 0,
+    maxPerStageDescriptorUpdateAfterBindStorageBuffers: u32 = 0,
+    maxPerStageDescriptorUpdateAfterBindSampledImages: u32 = 0,
+    maxPerStageDescriptorUpdateAfterBindStorageImages: u32 = 0,
+    maxPerStageDescriptorUpdateAfterBindInputAttachments: u32 = 0,
+    maxPerStageUpdateAfterBindResources: u32 = 0,
+    maxDescriptorSetUpdateAfterBindSamplers: u32 = 0,
+    maxDescriptorSetUpdateAfterBindUniformBuffers: u32 = 0,
+    maxDescriptorSetUpdateAfterBindUniformBuffersDynamic: u32 = 0,
+    maxDescriptorSetUpdateAfterBindStorageBuffers: u32 = 0,
+    maxDescriptorSetUpdateAfterBindStorageBuffersDynamic: u32 = 0,
+    maxDescriptorSetUpdateAfterBindSampledImages: u32 = 0,
+    maxDescriptorSetUpdateAfterBindStorageImages: u32 = 0,
+    maxDescriptorSetUpdateAfterBindInputAttachments: u32 = 0,
+    supportedDepthResolveModes: VkResolveModeFlags = 0,
+    supportedStencilResolveModes: VkResolveModeFlags = 0,
+    independentResolveNone: VkBool32 = 0,
+    independentResolve: VkBool32 = 0,
+    filterMinmaxSingleComponentFormats: VkBool32 = 0,
+    filterMinmaxImageComponentMapping: VkBool32 = 0,
+    maxTimelineSemaphoreValueDifference: u64 = 0,
+    framebufferIntegerColorSampleCounts: VkSampleCountFlags = 0,
+};
+===== struct_VkPhysicalDeviceVulkan13Properties = extern struct
+pub const struct_VkPhysicalDeviceVulkan13Properties = extern struct {
+    sType: VkStructureType = @import("std").mem.zeroes(VkStructureType),
+    pNext: ?*anyopaque = null,
+    minSubgroupSize: u32 = 0,
+    maxSubgroupSize: u32 = 0,
+    maxComputeWorkgroupSubgroups: u32 = 0,
+    requiredSubgroupSizeStages: VkShaderStageFlags = 0,
+    maxInlineUniformBlockSize: u32 = 0,
+    maxPerStageDescriptorInlineUniformBlocks: u32 = 0,
+    maxPerStageDescriptorUpdateAfterBindInlineUniformBlocks: u32 = 0,
+    maxDescriptorSetInlineUniformBlocks: u32 = 0,
+    maxDescriptorSetUpdateAfterBindInlineUniformBlocks: u32 = 0,
+    maxInlineUniformTotalSize: u32 = 0,
+    integerDotProduct8BitUnsignedAccelerated: VkBool32 = 0,
+    integerDotProduct8BitSignedAccelerated: VkBool32 = 0,
+    integerDotProduct8BitMixedSignednessAccelerated: VkBool32 = 0,
+    integerDotProduct4x8BitPackedUnsignedAccelerated: VkBool32 = 0,
+    integerDotProduct4x8BitPackedSignedAccelerated: VkBool32 = 0,
+    integerDotProduct4x8BitPackedMixedSignednessAccelerated: VkBool32 = 0,
+    integerDotProduct16BitUnsignedAccelerated: VkBool32 = 0,
+    integerDotProduct16BitSignedAccelerated: VkBool32 = 0,
+    integerDotProduct16BitMixedSignednessAccelerated: VkBool32 = 0,
+    integerDotProduct32BitUnsignedAccelerated: VkBool32 = 0,
+    integerDotProduct32BitSignedAccelerated: VkBool32 = 0,
+    integerDotProduct32BitMixedSignednessAccelerated: VkBool32 = 0,
+    integerDotProduct64BitUnsignedAccelerated: VkBool32 = 0,
+    integerDotProduct64BitSignedAccelerated: VkBool32 = 0,
+    integerDotProduct64BitMixedSignednessAccelerated: VkBool32 = 0,
+    integerDotProductAccumulatingSaturating8BitUnsignedAccelerated: VkBool32 = 0,
+    integerDotProductAccumulatingSaturating8BitSignedAccelerated: VkBool32 = 0,
+    integerDotProductAccumulatingSaturating8BitMixedSignednessAccelerated: VkBool32 = 0,
+    integerDotProductAccumulatingSaturating4x8BitPackedUnsignedAccelerated: VkBool32 = 0,
+    integerDotProductAccumulatingSaturating4x8BitPackedSignedAccelerated: VkBool32 = 0,
+    integerDotProductAccumulatingSaturating4x8BitPackedMixedSignednessAccelerated: VkBool32 = 0,
+    integerDotProductAccumulatingSaturating16BitUnsignedAccelerated: VkBool32 = 0,
+    integerDotProductAccumulatingSaturating16BitSignedAccelerated: VkBool32 = 0,
+    integerDotProductAccumulatingSaturating16BitMixedSignednessAccelerated: VkBool32 = 0,
+    integerDotProductAccumulatingSaturating32BitUnsignedAccelerated: VkBool32 = 0,
+    integerDotProductAccumulatingSaturating32BitSignedAccelerated: VkBool32 = 0,
+    integerDotProductAccumulatingSaturating32BitMixedSignednessAccelerated: VkBool32 = 0,
+    integerDotProductAccumulatingSaturating64BitUnsignedAccelerated: VkBool32 = 0,
+    integerDotProductAccumulatingSaturating64BitSignedAccelerated: VkBool32 = 0,
+    integerDotProductAccumulatingSaturating64BitMixedSignednessAccelerated: VkBool32 = 0,
+    storageTexelBufferOffsetAlignmentBytes: VkDeviceSize = 0,
+    storageTexelBufferOffsetSingleTexelAlignment: VkBool32 = 0,
+    uniformTexelBufferOffsetAlignmentBytes: VkDeviceSize = 0,
+    uniformTexelBufferOffsetSingleTexelAlignment: VkBool32 = 0,
+    maxBufferSize: VkDeviceSize = 0,
+};
+===== struct_VkPhysicalDeviceVulkan14Properties = extern struct
+pub const struct_VkPhysicalDeviceVulkan14Properties = extern struct {
+    sType: VkStructureType = @import("std").mem.zeroes(VkStructureType),
+    pNext: ?*anyopaque = null,
+    lineSubPixelPrecisionBits: u32 = 0,
+    maxVertexAttribDivisor: u32 = 0,
+    supportsNonZeroFirstInstance: VkBool32 = 0,
+    maxPushDescriptors: u32 = 0,
+    dynamicRenderingLocalReadDepthStencilAttachments: VkBool32 = 0,
+    dynamicRenderingLocalReadMultisampledAttachments: VkBool32 = 0,
+    earlyFragmentMultisampleCoverageAfterSampleCounting: VkBool32 = 0,
+    earlyFragmentSampleMaskTestBeforeSampleCounting: VkBool32 = 0,
+    depthStencilSwizzleOneSupport: VkBool32 = 0,
+    polygonModePointSize: VkBool32 = 0,
+    nonStrictSinglePixelWideLinesUseParallelogram: VkBool32 = 0,
+    nonStrictWideLinesUseParallelogram: VkBool32 = 0,
+    blockTexelViewCompatibleMultipleLayers: VkBool32 = 0,
+    maxCombinedImageSamplerDescriptorCount: u32 = 0,
+    fragmentShadingRateClampCombinerInputs: VkBool32 = 0,
+    defaultRobustnessStorageBuffers: VkPipelineRobustnessBufferBehavior = @import("std").mem.zeroes(VkPipelineRobustnessBufferBehavior),
+    defaultRobustnessUniformBuffers: VkPipelineRobustnessBufferBehavior = @import("std").mem.zeroes(VkPipelineRobustnessBufferBehavior),
+    defaultRobustnessVertexInputs: VkPipelineRobustnessBufferBehavior = @import("std").mem.zeroes(VkPipelineRobustnessBufferBehavior),
+    defaultRobustnessImages: VkPipelineRobustnessImageBehavior = @import("std").mem.zeroes(VkPipelineRobustnessImageBehavior),
+    copySrcLayoutCount: u32 = 0,
+    pCopySrcLayouts: [*c]VkImageLayout = null,
+    copyDstLayoutCount: u32 = 0,
+    pCopyDstLayouts: [*c]VkImageLayout = null,
+    optimalTilingLayoutUUID: [16]u8 = @import("std").mem.zeroes([16]u8),
+    identicalMemoryTypeRequirements: VkBool32 = 0,
+};
+===== struct_VkPhysicalDeviceCooperativeMatrixPropertiesKHR = extern struct
+pub const struct_VkPhysicalDeviceCooperativeMatrixPropertiesKHR = extern struct {
+    sType: VkStructureType = @import("std").mem.zeroes(VkStructureType),
+    pNext: ?*anyopaque = null,
+    cooperativeMatrixSupportedStages: VkShaderStageFlags = 0,
+};
+===== struct_VkPhysicalDeviceCooperativeMatrixFeaturesKHR = extern struct
+pub const struct_VkPhysicalDeviceCooperativeMatrixFeaturesKHR = extern struct {
+    sType: VkStructureType = @import("std").mem.zeroes(VkStructureType),
+    pNext: ?*anyopaque = null,
+    cooperativeMatrix: VkBool32 = 0,
+    cooperativeMatrixRobustBufferAccess: VkBool32 = 0,
+};
+===== struct_VkPhysicalDeviceMaintenance7FeaturesKHR = extern struct
+pub const struct_VkPhysicalDeviceMaintenance7FeaturesKHR = extern struct {
+    sType: VkStructureType = @import("std").mem.zeroes(VkStructureType),
+    pNext: ?*anyopaque = null,
+    maintenance7: VkBool32 = 0,
+};
+===== struct_VkPhysicalDeviceMaintenance8FeaturesKHR = extern struct
+pub const struct_VkPhysicalDeviceMaintenance8FeaturesKHR = extern struct {
+    sType: VkStructureType = @import("std").mem.zeroes(VkStructureType),
+    pNext: ?*anyopaque = null,
+    maintenance8: VkBool32 = 0,
+};
+===== struct_VkPhysicalDeviceMaintenance9FeaturesKHR = extern struct
+pub const struct_VkPhysicalDeviceMaintenance9FeaturesKHR = extern struct {
+    sType: VkStructureType = @import("std").mem.zeroes(VkStructureType),
+    pNext: ?*anyopaque = null,
+    maintenance9: VkBool32 = 0,
+};
+===== struct_VkPhysicalDeviceShaderMaximalReconvergenceFeaturesKHR = extern struct
+pub const struct_VkPhysicalDeviceShaderMaximalReconvergenceFeaturesKHR = extern struct {
+    sType: VkStructureType = @import("std").mem.zeroes(VkStructureType),
+    pNext: ?*anyopaque = null,
+    shaderMaximalReconvergence: VkBool32 = 0,
+};
+===== struct_VkPhysicalDeviceShaderQuadControlFeaturesKHR = extern struct
+pub const struct_VkPhysicalDeviceShaderQuadControlFeaturesKHR = extern struct {
+    sType: VkStructureType = @import("std").mem.zeroes(VkStructureType),
+    pNext: ?*anyopaque = null,
+    shaderQuadControl: VkBool32 = 0,
+};
+===== struct_VkPhysicalDeviceShaderUntypedPointersFeaturesKHR = extern struct
+pub const struct_VkPhysicalDeviceShaderUntypedPointersFeaturesKHR = extern struct {
+    sType: VkStructureType = @import("std").mem.zeroes(VkStructureType),
+    pNext: ?*anyopaque = null,
+    shaderUntypedPointers: VkBool32 = 0,
+};
+===== struct_VkPhysicalDeviceWorkgroupMemoryExplicitLayoutFeaturesKHR = extern struct
+pub const struct_VkPhysicalDeviceWorkgroupMemoryExplicitLayoutFeaturesKHR = extern struct {
+    sType: VkStructureType = @import("std").mem.zeroes(VkStructureType),
+    pNext: ?*anyopaque = null,
+    workgroupMemoryExplicitLayout: VkBool32 = 0,
+    workgroupMemoryExplicitLayoutScalarBlockLayout: VkBool32 = 0,
+    workgroupMemoryExplicitLayout8BitAccess: VkBool32 = 0,
+    workgroupMemoryExplicitLayout16BitAccess: VkBool32 = 0,
+};
+===== struct_VkPhysicalDeviceRobustness2FeaturesKHR = extern struct
+pub const struct_VkPhysicalDeviceRobustness2FeaturesKHR = extern struct {
+    sType: VkStructureType = @import("std").mem.zeroes(VkStructureType),
+    pNext: ?*anyopaque = null,
+    robustBufferAccess2: VkBool32 = 0,
+    robustImageAccess2: VkBool32 = 0,
+    nullDescriptor: VkBool32 = 0,
+};
+===== struct_VkDeviceBufferMemoryRequirements = extern struct
+pub const struct_VkDeviceBufferMemoryRequirements = extern struct {
+    sType: VkStructureType = @import("std").mem.zeroes(VkStructureType),
+    pNext: ?*const anyopaque = null,
+    pCreateInfo: [*c]const VkBufferCreateInfo = null,
+};

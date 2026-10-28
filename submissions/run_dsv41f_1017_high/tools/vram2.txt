@@ -1,0 +1,6 @@
+WARNING: radv is not a conformant Vulkan implementation, testing use only.
+bonsai-vk: Vulkan device AMD Radeon RX 9070 (RADV GFX1201)
+bonsai-vk: 14 device-local weight buffers
+open 0
+/proc/self/fdinfo/4 ['drm-driver:\tamdgpu', 'drm-client-id:\t242', 'drm-pdev:\t0000:03:00.0', 'drm-total-cpu:\t0', 'drm-shared-cpu:\t0', 'drm-resident-cpu:\t0', 'drm-purgeable-cpu:\t0', 'drm-total-gtt:\t2052 KiB']
+/proc/self/fdinfo/5 ['drm-driver:\tamdgpu', 'drm-client-id:\t242', 'drm-pdev:\t0000:03:00.0', 'drm-total-cpu:\t0', 'drm-shared-cpu:\t0', 'drm-resident-cpu:\t0', 'drm-purgeable-cpu:\t0', 'drm-total-gtt:\t2052 KiB']

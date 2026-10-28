@@ -1,0 +1,48 @@
+open 0
+ctx 0
+N alpha -17.18100 beta 12.63350
+N qkv 57.78500 z -635.15680
+N cs 48.18306 g -14.33845 fo -2.67353
+N attnout 1.26632
+N pre-res x -0.39864
+N res 0.86767
+N fg -489.75840 fu 46.13427 sw 1.23503
+N ffnout -0.53837
+DBG layer 0 sum 0.329305 first3 1.6285 -0.0624 -0.0114
+DBG layer 1 sum 1.327671 first3 1.3899 -0.1484 0.1928
+DBG layer 2 sum 0.731882 first3 2.7100 -0.0013 0.0726
+A probes -0.5470 -0.4375 -0.4443 | -3.6406 -3.3004 -3.9159
+A qhalf -7852.0444 ghalf -7272.2350 gsig 1111.3611
+A pregate 151.1458
+A gated -1.2714
+A attnout 2.5614
+DBG layer 3 sum -1.596700 first3 3.0977 -0.0718 0.0113
+DBG layer 4 sum 5.605932 first3 1.4569 -0.0315 0.1653
+DBG layer 5 sum 3.574355 first3 -0.5605 0.1023 0.1398
+DBG layer 6 sum 11.458245 first3 -0.4873 0.9366 -0.2615
+DBG layer 7 sum 5.485290 first3 -2.6921 1.1155 0.1532
+DBG layer 8 sum 10.467398 first3 -2.3814 0.9570 0.1003
+DBG layer 9 sum 16.190023 first3 -3.0049 0.9231 0.0832
+DBG layer 10 sum 14.922444 first3 -2.3117 0.7023 -0.1723
+DBG layer 11 sum 18.602130 first3 -2.9439 0.7538 -0.0650
+DBG layer 12 sum 19.291157 first3 -3.7534 0.6240 -0.0971
+DBG layer 13 sum 18.289299 first3 -3.9978 0.5249 -0.0835
+DBG layer 14 sum 14.818432 first3 -3.6974 0.7334 -0.1688
+DBG layer 15 sum 0.868814 first3 -4.0790 0.7744 -0.2582
+DBG layer 16 sum -7.701780 first3 -4.3178 0.7129 -0.2320
+DBG layer 17 sum -6.492786 first3 -4.7099 0.6596 -0.3527
+DBG layer 18 sum -15.132992 first3 -4.3488 0.3356 -0.5176
+DBG layer 19 sum -6.364206 first3 -3.9928 0.6679 0.1266
+DBG layer 20 sum 8.918694 first3 -0.4236 0.8818 0.2883
+DBG layer 21 sum 16.375101 first3 -0.9034 0.6106 0.3343
+DBG layer 22 sum 12.558661 first3 -2.2800 0.2881 0.4170
+DBG layer 23 sum 14.505489 first3 1.0805 0.9034 0.7189
+DBG layer 24 sum 15.190353 first3 3.5435 1.1291 0.5692
+DBG layer 25 sum 12.578120 first3 7.0054 1.4394 0.3766
+DBG layer 26 sum -5.678881 first3 5.8216 0.0374 0.3776
+DBG layer 27 sum -5.843167 first3 5.5039 0.7393 0.3527
+DBG layer 28 sum -12.479751 first3 10.0335 2.2282 0.3385
+DBG layer 29 sum -7.967053 first3 10.8204 2.4894 0.0994
+DBG layer 30 sum 41.676870 first3 20.3915 1.7782 -0.2669
+DBG layer 31 sum -54.797657 first3 48.8881 2.4811 -2.1395
+eval 0

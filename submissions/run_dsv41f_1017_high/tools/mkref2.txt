@@ -1,0 +1,8 @@
+load /workspace/data/Ternary-Bonsai-2-4B-PTQ1_0.gguf
+ctx 0 512 vulkan
+eval 0 6 32 3841 13477 37550 33075 888
+gen 0 16 1
+reset 0
+eval 0 2 12675 0
+gen 0 16 1
+quit

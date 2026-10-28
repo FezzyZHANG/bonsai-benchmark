@@ -1,0 +1,27 @@
+abi 1
+null model n_vocab -1 null model
+bad path -3 failed to open model: OpenFailed
+WARNING: radv is not a conformant Vulkan implementation, testing use only.
+open 0
+n_vocab 248320 n_ctx_train 262144
+tok empty 0
+tok cap small 1 None need 1
+tok ok 1 [5834]
+tok addbos 1
+tinfo -1 -1 tensor index out of range
+tinfo 99999 -1 tensor index out of range
+dequant unknown -1 unknown tensor
+dequant small -2 capacity 1 < required 32
+dequant ok -2
+ctx bad -6 context create failed: BadArg
+ctx ok 0
+eval null toks -1 null tokens
+eval n=0 -1 n_tokens must be >= 1
+eval small logits -2 logits capacity too small
+eval bad token -1 token id -5 out of range
+eval ok 0
+eval overflow -5 context overflow: pos 1 + 100 > 64
+gen prompt 3
+gen ignore eos 3
+gen empty fresh -1 empty prompt with empty context
+closed ok

@@ -1,0 +1,8 @@
+WARNING: radv is not a conformant Vulkan implementation, testing use only.
+open 0 0
+WARNING: radv is not a conformant Vulkan implementation, testing use only.
+open 1 0
+model 0 eval 0 top3 [np.int64(11), np.int64(1017), np.int64(353)]
+model 1 eval 0 top3 [np.int64(11), np.int64(1017), np.int64(353)]
+after close of m0, m1 eval 0 top3 [np.int64(11), np.int64(1017), np.int64(353)]
+done

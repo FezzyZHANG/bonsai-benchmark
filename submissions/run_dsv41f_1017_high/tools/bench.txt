@@ -1,0 +1,5 @@
+WARNING: radv is not a conformant Vulkan implementation, testing use only.
+open 0 t=0.38s
+1 token eval 0.062s -> 16.19 tok/s
+32 token eval 1.760s -> 18.18 tok/s
+gen 8 after 8 prompt: n=8 ids=[12675, 0, 12675, 0, 12675, 0, 12675, 0] t=1.82s

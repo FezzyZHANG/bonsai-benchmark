@@ -1,0 +1,21 @@
+0 //! File System.
+1 
+2 const std = @import("std.zig");
+3 
+4 /// Deprecated, use `std.Io.Dir.path`.
+5 pub const path = @import("fs/path.zig");
+6 /// Deprecated, use `std.base64.url_safe_alphabet_chars`.
+7 pub const base64_alphabet = std.base64.url_safe_alphabet_chars;
+8 /// Deprecated, use `std.base64.url_safe.Encoder`.
+9 pub const base64_encoder = std.base64.url_safe.Encoder;
+10 /// Deprecated, use `std.base64.url_safe.Decoder`.
+11 pub const base64_decoder = std.base64.url_safe.Decoder;
+12 /// Deprecated, use `std.Io.Dir.max_path_bytes`.
+13 pub const max_path_bytes = std.Io.Dir.max_path_bytes;
+14 /// Deprecated, use `std.Io.Dir.max_name_bytes`.
+15 pub const max_name_bytes = std.Io.Dir.max_name_bytes;
+16 
+17 test {
+18     _ = path;
+19     _ = @import("fs/test.zig");
+20 }

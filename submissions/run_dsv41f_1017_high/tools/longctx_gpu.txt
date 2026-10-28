@@ -1,0 +1,6 @@
+WARNING: radv is not a conformant Vulkan implementation, testing use only.
+prompt tokens 256
+ref out ['ok', 'ok', 'ok', 'ok 248320']
+eval rc 0 t=26.2s
+cos 0.999994 top1 198/198 KL 0.00000
+argmax ours 198 ref 198

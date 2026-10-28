@@ -1,0 +1,7 @@
+WARNING: radv is not a conformant Vulkan implementation, testing use only.
+GPU ready: AMD Radeon RX 9070 (RADV GFX1201), 201 weight buffers
+open 0 t=0.39s
+1 token eval 0.096s -> 10.38 tok/s
+32 token eval 3.359s -> 9.53 tok/s
+gen 8 after 8 prompt: n=8 ids=[12675, 0, 12675, 0, 12675, 0, 12675, 0] t=3.20s
+gpu matvecs: 13020

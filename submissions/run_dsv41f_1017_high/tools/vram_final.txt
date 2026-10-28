@@ -1,0 +1,5 @@
+vram before 0.0 MiB VmHWM:	   12844 kB
+WARNING: radv is not a conformant Vulkan implementation, testing use only.
+open rc 0 t=0.38 vram 1.7349624633789062 MiB VmHWM:	 1049512 kB
+after ctx16384 vram 1.7349624633789062 MiB VmHWM:	 1101192 kB
+after eval vram 1.7349624633789062 MiB VmHWM:	 1105672 kB

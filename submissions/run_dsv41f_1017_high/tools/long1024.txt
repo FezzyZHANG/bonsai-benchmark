@@ -1,0 +1,4 @@
+WARNING: radv is not a conformant Vulkan implementation, testing use only.
+ref ['ok', 'ok', 'ok', 'ok 248320']
+eval rc 0 t=62.5s 16.4 tok/s
+cos 0.999986 top1 1510/1510 KL 0.000056

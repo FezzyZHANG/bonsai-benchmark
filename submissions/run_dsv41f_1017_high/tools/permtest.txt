@@ -1,0 +1,11 @@
+identity                 node67=2.0223 node69=-0.2805 out=0.3637
+p4 s+2kh                 node67=-4.1514 node69=-0.7489 out=0.1370
+p2 16s+kh                node67=2.0223 node69=-0.2805 out=0.3637
+p2b                      node67=2.5526 node69=0.9983 out=1.2663
+swap halves              node67=-0.6867 node69=-0.2125 out=0.9655
+rev                      node67=-1.4176 node69=0.2648 out=-1.2590
+xor16                    node67=-0.6867 node69=-0.2125 out=0.9655
+bitrev5                  node67=1.3435 node69=1.2913 out=0.6513
+group2                   node67=2.5526 node69=0.9983 out=1.2663
+group2b                  node67=2.0530 node69=0.9338 out=-1.0108
+targets node67=2.556323 node69=0.998533 out=1.267481

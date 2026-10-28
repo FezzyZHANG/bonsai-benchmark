@@ -1,0 +1,47 @@
+#version 450
+layout(local_size_x = 64) in;
+layout(std430, binding = 0) readonly buffer W { uint w[]; };
+layout(std430, binding = 1) readonly buffer X { float x[]; };
+layout(std430, binding = 2) writeonly buffer O { float o[]; };
+layout(push_constant) uniform P { uint cols; } pc;
+
+uint b8(uint i) { return (w[i >> 2] >> ((i & 3u) * 8u)) & 0xFFu; }
+
+void main() {
+    uint row = gl_GlobalInvocationID.x;
+    uint nblk = pc.cols >> 7;
+    float acc = 0.0;
+    for (uint b = 0u; b < nblk; ++b) {
+        uint base = (row * nblk + b) * 28u;
+        float d = unpackHalf2x16(b8(base + 26u) | (b8(base + 27u) << 8u)).x;
+        uint xb = b * 128u;
+        uint mult = 1u;
+        for (uint dg = 0u; dg < 5u; ++dg) {
+            for (uint j = 0u; j < 16u; ++j) {
+                uint v = (b8(base + j) * mult) & 0xFFu;
+                int q = int((v * 3u) >> 8u) - 1;
+                acc += d * float(q) * x[xb + dg * 16u + j];
+            }
+            mult = (mult * 3u) & 0xFFu;
+        }
+        mult = 1u;
+        for (uint dg = 0u; dg < 5u; ++dg) {
+            for (uint j = 0u; j < 8u; ++j) {
+                uint v = (b8(base + 16u + j) * mult) & 0xFFu;
+                int q = int((v * 3u) >> 8u) - 1;
+                acc += d * float(q) * x[xb + 80u + dg * 8u + j];
+            }
+            mult = (mult * 3u) & 0xFFu;
+        }
+        mult = 1u;
+        for (uint dg = 0u; dg < 4u; ++dg) {
+            for (uint j = 0u; j < 2u; ++j) {
+                uint v = (b8(base + 24u + j) * mult) & 0xFFu;
+                int q = int((v * 3u) >> 8u) - 1;
+                acc += d * float(q) * x[xb + 120u + dg * 2u + j];
+            }
+            mult = (mult * 3u) & 0xFFu;
+        }
+    }
+    o[row] = acc;
+}

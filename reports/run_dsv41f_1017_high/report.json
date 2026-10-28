@@ -1,0 +1,8 @@
+{
+ "submission": "/mnt/workspace/bonsai-runs/run_dsv41f_1017_high",
+ "started": "2026-10-27 21:08:11",
+ "submission_bytes": 2250899,
+ "build_ok": true,
+ "build_log": "",
+ "harness_error": "harness failed (exit 139)"
+}

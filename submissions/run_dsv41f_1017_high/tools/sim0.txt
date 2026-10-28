@@ -1,0 +1,20 @@
+input_embed            sum=-0.398644 oracle input_embed sum=-0.398644 first=[-0.02534543  0.01037082 -0.01084084 -0.01837468  0.01249435  0.00403935]
+attn_norm              sum=-44.322940 oracle attn_norm sum=-44.322887 first=[-3.80267974  1.21624437 -1.16127605 -1.94422656  1.22686691  0.5425258 ]
+xh(node19)             sum=91.889337 oracle node_19 sum=91.889381 first=[-1.22992586 -1.27805807 -0.17921052  0.94940662  1.48986822  0.1794812 ]
+qkv                    sum=57.784838 oracle node_21 sum=57.664261 first=[-0.40930546 -0.73677758  0.5109583   0.45126478 -1.17427812  0.70568777]
+maxdiff Wqkv 0.0
+qkv from st sum 57.78483787847298
+qkv oracle first 6: [-0.4049,-0.7346,0.5102,-0.5206,-1.1018,-1.4062] sum 57.664261
+alpha                  sum=-17.180999 oracle alpha sum=-17.180998 first=[ 1.32748609 -0.05084149 -0.03453929 -2.46806343 -0.87173893  2.55524754]
+softplus               sum=94.492834 oracle a_softplus sum=94.492844 first=[3.31118023e-02 1.59637913e-01 1.90904607e+01 2.87146816e+00
+ 1.42093932e-02 2.68152839e-01]
+gate                   sum=-14.338453 oracle gate sum=-14.338453 first=[-5.70919057e-03 -2.34939586e-03 -1.27898111e+00 -1.47500084e-01
+ -7.53070252e-04 -1.23472347e-02]
+beta                   sum=12.633501 oracle beta sum=12.633500 first=[-1.64978156  1.14151198  0.75219371  1.79654281  0.03102829 -0.87194493]
+beta_sig               sum=18.378263 oracle beta_sigmoid sum=18.378262 first=[0.16113848 0.75795713 0.67965651 0.85772757 0.50775645 0.29484976]
+convw shape (8192, 4)
+Traceback (most recent call last):
+  File "/workspace/tools/sim0.py", line 91, in <module>
+    conv=convw[3]*qkv  # only current timestep nonzero prev states
+         ~~~~~~~~^~~~
+ValueError: operands could not be broadcast together with shapes (4,) (8192,) 

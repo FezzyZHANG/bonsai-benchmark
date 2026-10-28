@@ -1,0 +1,12 @@
+WARNING: radv is not a conformant Vulkan implementation, testing use only.
+open 0 None
+ctx 0 None
+eval [12675] rc 0 err None
+  cos 0.999991 top1 11/11 KL 0.00018 got_max 11.361 ref_max 11.345
+  got top5 [  11 1017  353  198    0] ref top5 [  11 1017  353  198    0]
+eval [12675, 0] rc 0 err None
+  cos 0.999997 top1 353/353 KL 0.00010 got_max 11.794 ref_max 11.779
+  got top5 [ 353  198 2500 2921 2885] ref top5 [ 353  198 2500 2921 2885]
+eval [32, 3841, 13477, 37550, 33075, 888] rc 0 err None
+  cos 0.999992 top1 279/279 KL 0.00027 got_max 17.347 ref_max 17.386
+  got top5 [ 279  264  220 2250  198] ref top5 [ 279  264  220 2250  198]
